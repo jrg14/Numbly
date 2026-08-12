@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://gameplay/buildings/source/source_building.gd" id="1_source_script"]
+[ext_resource type="Resource" path="res://data/buildings/source_data.tres" id="2_source_data"]
+
+[node name="SourceBuilding" type="Node2D"]
+script = ExtResource("1_source_script")
+building_data = ExtResource("2_source_data")
+generated_value = 1
+packets_per_second = 1.0
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(0.18, 0.62, 0.42, 1)
+polygon = PackedVector2Array(-24, -24, 24, 0, -24, 24)

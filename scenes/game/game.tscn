@@ -1,1 +1,101 @@
+[gd_scene load_steps=11 format=3]
 
+[ext_resource type="Script" path="res://scenes/game/game.gd" id="1_game_script"]
+[ext_resource type="Script" path="res://core/grid/grid_manager.gd" id="2_grid_manager"]
+[ext_resource type="Script" path="res://gameplay/placement/placement_preview.gd" id="3_placement_preview"]
+[ext_resource type="Script" path="res://gameplay/placement/placement_controller.gd" id="4_placement_controller"]
+[ext_resource type="Script" path="res://core/simulation/simulation_manager.gd" id="5_simulation_manager"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/source/source_2_building.tscn" id="6_source_2_scene"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/source/source_3_building.tscn" id="7_source_3_scene"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/conveyor/conveyor_building.tscn" id="8_conveyor_scene"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/addition/addition_building.tscn" id="9_addition_scene"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/output/output_5_building.tscn" id="10_output_scene"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_game_script")
+
+[node name="GridManager" type="Node2D" parent="."]
+position = Vector2(96, 112)
+script = ExtResource("2_grid_manager")
+grid_size = Vector2i(8, 8)
+cell_size = Vector2(64, 64)
+
+[node name="Buildings" type="Node2D" parent="."]
+
+[node name="PlacementPreview" type="Node2D" parent="."]
+visible = false
+script = ExtResource("3_placement_preview")
+
+[node name="PlacementController" type="Node" parent="."]
+script = ExtResource("4_placement_controller")
+grid_manager_path = NodePath("../GridManager")
+placement_preview_path = NodePath("../PlacementPreview")
+build_parent_path = NodePath("../Buildings")
+available_building_scenes = Array[PackedScene]([ExtResource("6_source_2_scene"), ExtResource("7_source_3_scene"), ExtResource("8_conveyor_scene"), ExtResource("9_addition_scene"), ExtResource("10_output_scene")])
+
+[node name="SimulationManager" type="Node" parent="."]
+script = ExtResource("5_simulation_manager")
+ticks_per_second = 10
+simulated_root_path = NodePath("../Buildings")
+grid_manager_path = NodePath("../GridManager")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Controls" type="HBoxContainer" parent="UI"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 620.0
+offset_bottom = 56.0
+theme_override_constants/separation = 8
+
+[node name="PlayPauseButton" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(88, 40)
+text = "Play"
+
+[node name="Source2Button" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(88, 40)
+text = "Source 2"
+
+[node name="Source3Button" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(88, 40)
+text = "Source 3"
+
+[node name="ConveyorButton" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(104, 40)
+text = "Conveyor"
+
+[node name="AdditionButton" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(96, 40)
+text = "Addition"
+
+[node name="OutputButton" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(88, 40)
+text = "Output 5"
+
+[node name="RotateButton" type="Button" parent="UI/Controls"]
+custom_minimum_size = Vector2(88, 40)
+text = "Rotate"
+
+[node name="SelectedLabel" type="Label" parent="UI/Controls"]
+custom_minimum_size = Vector2(144, 40)
+vertical_alignment = 1
+text = "Selected: Source"
+
+[node name="TickLabel" type="Label" parent="UI/Controls"]
+custom_minimum_size = Vector2(88, 40)
+vertical_alignment = 1
+text = "Tick: 0"
+
+[node name="ObjectiveLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 64.0
+offset_right = 520.0
+offset_bottom = 88.0
+text = "Objective: produce 5 from sources 2 and 3"
+
+[node name="StatusLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 88.0
+offset_right = 720.0
+offset_bottom = 112.0
+text = "Place conveyors and Addition, then press Play."

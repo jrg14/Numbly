@@ -1,1 +1,14 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
 
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+
+[resource]
+script = ExtResource("1_building_data")
+id = &"addition"
+display_name = "Addition"
+description = "Consume dos paquetes numericos y emite la suma."
+building_type = 3
+cost = 3
+input_count = 2
+output_count = 1
+tick_interval = 0.0

@@ -4,11 +4,11 @@
 
 [resource]
 script = ExtResource("1_building_data")
-id = &"source"
-display_name = "Source"
-description = "Genera paquetes numericos con un valor fijo."
-building_type = 0
+id = &"output"
+display_name = "Output"
+description = "Consume paquetes y valida que coincidan con el objetivo."
+building_type = 2
 cost = 0
-input_count = 0
-output_count = 1
-tick_interval = 1.0
+input_count = 1
+output_count = 0
+tick_interval = 0.0
