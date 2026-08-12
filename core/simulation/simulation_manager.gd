@@ -6,6 +6,7 @@ signal simulation_paused
 signal simulation_tick_completed(tick_index: int, tick_delta: float)
 signal packet_transferred(packet: NumberPacket, from_building: Building, to_building: Building)
 signal packet_blocked(packet: NumberPacket, from_building: Building, target_cell: Vector2i)
+signal output_packet_consumed(packet: NumberPacket, output: OutputBuilding, matched_target: bool)
 signal output_target_reached(output: OutputBuilding, total_accepted: int)
 signal connection_error(message: String)
 
@@ -136,6 +137,9 @@ func _sync_building_connections() -> void:
 			var output_callable := Callable(self, "_on_output_target_reached").bind(output)
 			if not output.target_reached.is_connected(output_callable):
 				output.target_reached.connect(output_callable)
+			var packet_consumed_callable := Callable(self, "_on_output_packet_consumed").bind(output)
+			if not output.packet_consumed.is_connected(packet_consumed_callable):
+				output.packet_consumed.connect(packet_consumed_callable)
 			_connected_outputs[output] = true
 
 
@@ -160,3 +164,7 @@ func _on_building_packet_output(packet: NumberPacket, from_building: Building) -
 
 func _on_output_target_reached(total_accepted: int, output: OutputBuilding) -> void:
 	output_target_reached.emit(output, total_accepted)
+
+
+func _on_output_packet_consumed(packet: NumberPacket, matched_target: bool, output: OutputBuilding) -> void:
+	output_packet_consumed.emit(packet, output, matched_target)

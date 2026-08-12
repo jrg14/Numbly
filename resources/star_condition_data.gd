@@ -5,6 +5,7 @@ enum ConditionType {
 	COMPLETE_LEVEL,
 	MAX_BUILDINGS,
 	MAX_TICKS,
+	MAX_BUDGET,
 }
 
 @export_range(1, 3, 1) var stars: int = 1

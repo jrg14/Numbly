@@ -40,6 +40,9 @@ func _ready() -> void:
 
 	level_controller.level_loaded.connect(_on_level_loaded)
 	level_controller.level_load_failed.connect(_on_level_load_failed)
+	level_controller.level_completed.connect(_on_level_completed)
+	level_controller.level_failed.connect(_on_level_failed)
+	level_controller.objectives_changed.connect(_on_objectives_changed)
 	placement_controller.selected_building_changed.connect(_on_selected_building_changed)
 	placement_controller.placement_failed.connect(_on_placement_failed)
 	placement_controller.history_changed.connect(_on_history_changed)
@@ -49,12 +52,11 @@ func _ready() -> void:
 	simulation_manager.simulation_tick_completed.connect(_on_simulation_tick_completed)
 	simulation_manager.packet_transferred.connect(_on_packet_transferred)
 	simulation_manager.packet_blocked.connect(_on_packet_blocked)
-	simulation_manager.output_target_reached.connect(_on_output_target_reached)
+	simulation_manager.output_packet_consumed.connect(_on_output_packet_consumed)
 	simulation_manager.connection_error.connect(_on_connection_error)
 
 	reset_level()
 	_refresh_play_pause_label()
-	_on_simulation_tick_completed(simulation_manager.tick_index, 0.0)
 	_on_history_changed(false, false)
 
 
@@ -81,13 +83,7 @@ func _on_selected_building_changed(index: int, _scene: PackedScene) -> void:
 
 func _on_simulation_tick_completed(tick: int, _tick_delta: float) -> void:
 	tick_label.text = "Tick: %d" % tick
-
-	if _level_completed or current_level == null or current_level.max_ticks <= 0:
-		return
-
-	if tick >= current_level.max_ticks:
-		simulation_manager.pause()
-		status_label.text = "Tick limit reached. Reset or improve the layout."
+	level_controller.record_tick(tick, _tick_delta, buildings_root)
 
 
 func reset_level() -> void:
@@ -98,6 +94,7 @@ func reset_level() -> void:
 	if not level_controller.load_level(current_level, grid_manager, buildings_root):
 		return
 
+	level_controller.refresh_layout_metrics(buildings_root)
 	simulation_manager.reset_simulation_state()
 	status_label.text = "Place buildings, then press Play."
 
@@ -110,10 +107,29 @@ func _on_packet_blocked(packet: NumberPacket, from_building: Building, target_ce
 	status_label.text = "Packet %d blocked from %s at %s" % [packet.value, from_building.name, target_cell]
 
 
-func _on_output_target_reached(_output: OutputBuilding, total_accepted: int) -> void:
+func _on_output_packet_consumed(packet: NumberPacket, _output: OutputBuilding, matched_target: bool) -> void:
+	level_controller.record_output_packet(packet, matched_target, buildings_root)
+
+
+func _on_level_completed(result: LevelResult) -> void:
+	if _level_completed:
+		return
+
 	_level_completed = true
-	status_label.text = "Objective complete: output received %d valid packet(s). Stars: %d" % [total_accepted, _calculate_stars()]
+	status_label.text = "Objective complete. Stars: %d | Ticks: %d | Budget: %d" % [
+		result.stars,
+		result.tick_count,
+		result.spent_budget,
+	]
 	simulation_manager.pause()
+
+
+func _on_level_failed(message: String) -> void:
+	if _level_completed:
+		return
+
+	simulation_manager.pause()
+	status_label.text = "Objective failed: %s" % message
 
 
 func _on_connection_error(message: String) -> void:
@@ -127,6 +143,7 @@ func _on_placement_failed(cell: Vector2i) -> void:
 func _on_layout_changed() -> void:
 	_level_completed = false
 	simulation_manager.reset()
+	level_controller.refresh_layout_metrics(buildings_root)
 	status_label.text = "Layout changed. Simulation reset."
 
 
@@ -140,6 +157,10 @@ func _on_level_loaded(level_data: LevelData) -> void:
 func _on_level_load_failed(message: String) -> void:
 	objective_label.text = "Level load failed"
 	status_label.text = message
+
+
+func _on_objectives_changed(summary: String) -> void:
+	objective_label.text = summary
 
 
 func _on_history_changed(can_undo: bool, can_redo: bool) -> void:
@@ -156,27 +177,3 @@ func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
 
 		if has_building:
 			button.text = available_buildings[i].display_name
-
-
-func _calculate_stars() -> int:
-	if current_level == null:
-		return 0
-
-	var earned_stars := 0
-	var placed_buildings := level_controller.get_player_building_count(buildings_root)
-
-	for star_condition in current_level.star_conditions:
-		if star_condition == null:
-			continue
-
-		match star_condition.condition_type:
-			StarConditionData.ConditionType.COMPLETE_LEVEL:
-				earned_stars = maxi(earned_stars, star_condition.stars)
-			StarConditionData.ConditionType.MAX_BUILDINGS:
-				if placed_buildings <= star_condition.limit:
-					earned_stars = maxi(earned_stars, star_condition.stars)
-			StarConditionData.ConditionType.MAX_TICKS:
-				if simulation_manager.tick_index <= star_condition.limit:
-					earned_stars = maxi(earned_stars, star_condition.stars)
-
-	return earned_stars

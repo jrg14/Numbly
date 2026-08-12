@@ -2,6 +2,7 @@ extends Building
 class_name OutputBuilding
 
 signal target_reached(total_accepted: int)
+signal packet_consumed(packet: NumberPacket, matched_target: bool)
 signal wrong_value_received(packet: NumberPacket)
 
 @export var target_value: int = 1
@@ -39,10 +40,12 @@ func configure_from_level_data(level_building_data: LevelBuildingData) -> void:
 func _on_packet_accepted(packet: NumberPacket) -> void:
 	if packet.value != target_value:
 		rejected_count += 1
+		packet_consumed.emit(packet, false)
 		wrong_value_received.emit(packet)
 		return
 
 	accepted_count += 1
+	packet_consumed.emit(packet, true)
 
 	if not is_complete and accepted_count >= required_count:
 		is_complete = true

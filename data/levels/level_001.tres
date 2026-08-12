@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LevelData" load_steps=16 format=3]
+[gd_resource type="Resource" script_class="LevelData" load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://resources/level_data.gd" id="1_level_data"]
 [ext_resource type="Resource" path="res://data/buildings/source_data.tres" id="2_source_data"]
@@ -39,8 +39,27 @@ required_count = 1
 [sub_resource type="Resource" id="ObjectiveData_target_5"]
 script = ExtResource("7_objective_data")
 objective_type = 0
+is_constraint = false
 target_value = 5
 required_count = 1
+
+[sub_resource type="Resource" id="ObjectiveData_machine_limit"]
+script = ExtResource("7_objective_data")
+objective_type = 2
+is_constraint = true
+max_buildings = 24
+
+[sub_resource type="Resource" id="ObjectiveData_time_limit"]
+script = ExtResource("7_objective_data")
+objective_type = 3
+is_constraint = true
+max_ticks = 300
+
+[sub_resource type="Resource" id="ObjectiveData_budget_limit"]
+script = ExtResource("7_objective_data")
+objective_type = 4
+is_constraint = true
+max_budget = 24
 
 [sub_resource type="Resource" id="StarConditionData_complete"]
 script = ExtResource("8_star_condition_data")
@@ -62,6 +81,13 @@ condition_type = 2
 limit = 180
 description = "Complete within 180 simulation ticks."
 
+[sub_resource type="Resource" id="StarConditionData_budget"]
+script = ExtResource("8_star_condition_data")
+stars = 3
+condition_type = 3
+limit = 16
+description = "Spend 16 or less."
+
 [resource]
 script = ExtResource("1_level_data")
 id = &"level_001"
@@ -70,7 +96,7 @@ objective_text = "Combina 2 y 3 para producir 5."
 grid_size = Vector2i(8, 8)
 initial_buildings = Array[LevelBuildingData]([SubResource("LevelBuildingData_source_2"), SubResource("LevelBuildingData_source_3"), SubResource("LevelBuildingData_output_5")])
 allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtResource("3_adder_data")])
-objectives = Array[ObjectiveData]([SubResource("ObjectiveData_target_5")])
+objectives = Array[ObjectiveData]([SubResource("ObjectiveData_target_5"), SubResource("ObjectiveData_machine_limit"), SubResource("ObjectiveData_time_limit"), SubResource("ObjectiveData_budget_limit")])
 max_buildings = 24
 max_ticks = 300
-star_conditions = Array[StarConditionData]([SubResource("StarConditionData_complete"), SubResource("StarConditionData_buildings"), SubResource("StarConditionData_ticks")])
+star_conditions = Array[StarConditionData]([SubResource("StarConditionData_complete"), SubResource("StarConditionData_buildings"), SubResource("StarConditionData_ticks"), SubResource("StarConditionData_budget")])
