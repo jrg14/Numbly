@@ -1,11 +1,17 @@
 extends Node
 
+const DEFAULT_LEVEL_PATH := "res://data/levels/level_001.tres"
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass # Replace with function body.
+var selected_level_path: String = DEFAULT_LEVEL_PATH
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func select_level(level_path: String) -> void:
+	selected_level_path = level_path
+
+
+func get_selected_level() -> LevelData:
+	var level := load(selected_level_path) as LevelData
+	if level != null:
+		return level
+
+	return load(DEFAULT_LEVEL_PATH) as LevelData

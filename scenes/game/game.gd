@@ -21,6 +21,8 @@ var _level_completed: bool = false
 
 
 func _ready() -> void:
+	current_level = GameState.get_selected_level()
+
 	build_buttons = [
 		$UI/Controls/BuildButton1,
 		$UI/Controls/BuildButton2,

@@ -12,28 +12,28 @@
 [sub_resource type="Resource" id="SourceA"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 1)
+cell = Vector2i(0, 2)
 locked = true
-generated_value = 1
+generated_value = 4
 
 [sub_resource type="Resource" id="SourceB"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 5)
+cell = Vector2i(0, 6)
 locked = true
 generated_value = 4
 
 [sub_resource type="Resource" id="Output"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("4_output_data")
-cell = Vector2i(7, 3)
+cell = Vector2i(7, 4)
 locked = true
-target_value = 5
+target_value = 8
 
 [sub_resource type="Resource" id="Target"]
 script = ExtResource("7_objective_data")
 objective_type = 0
-target_value = 5
+target_value = 8
 required_count = 1
 
 [sub_resource type="Resource" id="MachineLimit"]
@@ -83,9 +83,9 @@ description = "Spend 14 or less."
 
 [resource]
 script = ExtResource("1_level_data")
-id = &"level_002"
-display_name = "Uno mas cuatro"
-objective_text = "Combina 1 y 4 para producir 5."
+id = &"level_003"
+display_name = "Doble cuatro"
+objective_text = "Suma 4 y 4 para producir 8."
 grid_size = Vector2i(8, 8)
 initial_buildings = Array[LevelBuildingData]([SubResource("SourceA"), SubResource("SourceB"), SubResource("Output")])
 allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtResource("3_adder_data")])
