@@ -12,6 +12,11 @@ func can_accept_packet(_packet: NumberPacket) -> bool:
 	return _get_total_buffered_packets() < max_buffer_size
 
 
+func reset_simulation() -> void:
+	_input_buffers.clear()
+	_lane_order.clear()
+
+
 func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bool:
 	if not can_accept_packet(packet):
 		return false

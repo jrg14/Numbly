@@ -8,6 +8,7 @@ signal packet_rejected(packet: NumberPacket, by_building: Building)
 @export var building_data: BuildingData
 @export var grid_position: Vector2i = Vector2i.ZERO
 @export var facing: Vector2i = Vector2i.RIGHT
+@export var locked: bool = false
 
 
 func can_accept_packet(_packet: NumberPacket) -> bool:
@@ -42,9 +43,18 @@ func simulation_tick(_delta: float) -> void:
 	pass
 
 
+func reset_simulation() -> void:
+	pass
+
+
+func set_rotation_steps(rotation_steps: int) -> void:
+	var normalized_steps := rotation_steps % 4
+	rotation_degrees = normalized_steps * 90.0
+	facing = _get_facing_from_rotation_steps(normalized_steps)
+
+
 func rotate_clockwise() -> void:
-	facing = Vector2i(-facing.y, facing.x)
-	rotation_degrees += 90.0
+	set_rotation_steps(int(rotation_degrees / 90.0) + 1)
 
 
 func emit_packet(packet: NumberPacket) -> void:
@@ -57,3 +67,15 @@ func _on_packet_accepted(_packet: NumberPacket) -> void:
 
 func _on_packet_accepted_from(packet: NumberPacket, _from_building: Building) -> void:
 	_on_packet_accepted(packet)
+
+
+func _get_facing_from_rotation_steps(rotation_steps: int) -> Vector2i:
+	match rotation_steps % 4:
+		0:
+			return Vector2i.RIGHT
+		1:
+			return Vector2i.DOWN
+		2:
+			return Vector2i.LEFT
+		_:
+			return Vector2i.UP

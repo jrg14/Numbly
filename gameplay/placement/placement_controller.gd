@@ -5,12 +5,16 @@ signal selected_building_changed(index: int, scene: PackedScene)
 signal placement_succeeded(piece: Node2D, cell: Vector2i)
 signal placement_failed(cell: Vector2i)
 signal rotation_changed(rotation_steps: int)
+signal history_changed(can_undo: bool, can_redo: bool)
+signal layout_changed
 
 @export var grid_manager_path: NodePath
 @export var placement_preview_path: NodePath
 @export var build_parent_path: NodePath
 @export var available_building_scenes: Array[PackedScene] = []
+@export var available_building_data: Array[BuildingData] = []
 @export var delete_with_right_click: bool = true
+@export var max_placed_buildings: int = 0
 
 var selected_building_index: int = -1
 var rotation_steps: int = 0
@@ -19,6 +23,8 @@ var _grid_manager: GridManager
 var _placement_preview: PlacementPreview
 var _build_parent: Node
 var _last_hovered_cell: Vector2i = Vector2i(-9999, -9999)
+var _undo_stack: Array[BuildCommand] = []
+var _redo_stack: Array[BuildCommand] = []
 
 
 func _ready() -> void:
@@ -29,7 +35,10 @@ func _ready() -> void:
 	if _grid_manager != null and _placement_preview != null:
 		_placement_preview.cell_size = _grid_manager.cell_size
 
-	if not available_building_scenes.is_empty():
+	if available_building_data.is_empty():
+		_migrate_scene_exports_to_building_data()
+
+	if not available_building_data.is_empty():
 		select_building_index(0)
 
 
@@ -51,7 +60,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func select_building_index(index: int) -> void:
-	if index < 0 or index >= available_building_scenes.size():
+	if index < 0 or index >= available_building_data.size():
 		return
 
 	if selected_building_index != index:
@@ -59,17 +68,36 @@ func select_building_index(index: int) -> void:
 		rotation_changed.emit(rotation_steps)
 
 	selected_building_index = index
-	selected_building_changed.emit(index, available_building_scenes[index])
+	selected_building_changed.emit(index, available_building_data[index].scene)
 	_update_preview(get_viewport().get_mouse_position())
 
 
 func select_building_scene(scene: PackedScene) -> void:
-	var scene_index := available_building_scenes.find(scene)
+	var scene_index := -1
+	for i in range(available_building_data.size()):
+		if available_building_data[i] != null and available_building_data[i].scene == scene:
+			scene_index = i
+			break
+
 	if scene_index == -1:
-		available_building_scenes.append(scene)
-		scene_index = available_building_scenes.size() - 1
+		return
 
 	select_building_index(scene_index)
+
+
+func set_available_buildings(building_data_list: Array[BuildingData]) -> void:
+	available_building_data = building_data_list.duplicate()
+	available_building_scenes.clear()
+
+	for building_data in available_building_data:
+		if building_data != null:
+			available_building_scenes.append(building_data.scene)
+
+	selected_building_index = -1
+	clear_history()
+
+	if not available_building_data.is_empty():
+		select_building_index(0)
 
 
 func rotate_clockwise() -> void:
@@ -86,32 +114,99 @@ func place_selected_at(cell: Vector2i) -> bool:
 		placement_failed.emit(cell)
 		return false
 
-	var scene := available_building_scenes[selected_building_index]
-	var piece := scene.instantiate() as Node2D
-	if piece == null:
+	if max_placed_buildings > 0 and _get_placed_building_count() >= max_placed_buildings:
 		placement_failed.emit(cell)
 		return false
 
-	piece.rotation_degrees = rotation_steps * 90.0
-
-	if piece is Building:
-		piece.facing = _get_facing_from_rotation()
-
-	var placed := _grid_manager.place_piece(piece, cell, _get_build_parent())
-	if placed:
-		placement_succeeded.emit(piece, cell)
-	else:
-		piece.queue_free()
+	var building_data := available_building_data[selected_building_index]
+	if building_data == null or building_data.scene == null:
 		placement_failed.emit(cell)
+		return false
 
-	return placed
+	var command := BuildCommand.new()
+	command.command_type = BuildCommand.CommandType.PLACE
+	command.grid_manager = _grid_manager
+	command.build_parent = _get_build_parent()
+	command.building_data = building_data
+	command.cell = cell
+	command.rotation_steps = rotation_steps
+
+	var placed := _execute_command(command)
+	if placed:
+		placement_succeeded.emit(command.piece, cell)
+		return true
+
+	placement_failed.emit(cell)
+	return false
 
 
 func remove_piece_at(cell: Vector2i) -> Node2D:
-	if _grid_manager == null:
+	if _grid_manager == null or not _grid_manager.is_in_bounds(cell):
 		return null
 
-	return _grid_manager.remove_piece_at(cell, true)
+	var occupant := _grid_manager.get_occupant(cell)
+	if occupant == null:
+		return null
+
+	var building := occupant as Building
+	if building != null and building.locked:
+		placement_failed.emit(cell)
+		return null
+
+	var command := BuildCommand.new()
+	command.command_type = BuildCommand.CommandType.REMOVE
+	command.grid_manager = _grid_manager
+	command.build_parent = _get_build_parent()
+	command.cell = cell
+
+	if _execute_command(command):
+		return command.piece
+
+	return null
+
+
+func undo() -> bool:
+	if _undo_stack.is_empty():
+		return false
+
+	var command := _undo_stack.pop_back() as BuildCommand
+	if not command.undo():
+		history_changed.emit(can_undo(), can_redo())
+		return false
+
+	_redo_stack.append(command)
+	history_changed.emit(can_undo(), can_redo())
+	layout_changed.emit()
+	return true
+
+
+func redo() -> bool:
+	if _redo_stack.is_empty():
+		return false
+
+	var command := _redo_stack.pop_back() as BuildCommand
+	if not command.execute():
+		history_changed.emit(can_undo(), can_redo())
+		return false
+
+	_undo_stack.append(command)
+	history_changed.emit(can_undo(), can_redo())
+	layout_changed.emit()
+	return true
+
+
+func clear_history() -> void:
+	_undo_stack.clear()
+	_redo_stack.clear()
+	history_changed.emit(false, false)
+
+
+func can_undo() -> bool:
+	return not _undo_stack.is_empty()
+
+
+func can_redo() -> bool:
+	return not _redo_stack.is_empty()
 
 
 func _handle_key_input(event: InputEventKey) -> void:
@@ -128,6 +223,12 @@ func _handle_key_input(event: InputEventKey) -> void:
 			select_building_index(4)
 		KEY_R:
 			rotate_clockwise()
+		KEY_Z:
+			if event.ctrl_pressed:
+				undo()
+		KEY_Y:
+			if event.ctrl_pressed:
+				redo()
 		KEY_DELETE, KEY_BACKSPACE:
 			if _grid_manager != null:
 				remove_piece_at(_last_hovered_cell)
@@ -192,3 +293,39 @@ func _get_facing_from_rotation() -> Vector2i:
 			return Vector2i.LEFT
 		_:
 			return Vector2i.UP
+
+
+func _execute_command(command: BuildCommand) -> bool:
+	if not command.execute():
+		return false
+
+	_undo_stack.append(command)
+	_redo_stack.clear()
+	history_changed.emit(can_undo(), can_redo())
+	layout_changed.emit()
+	return true
+
+
+func _migrate_scene_exports_to_building_data() -> void:
+	for scene in available_building_scenes:
+		if scene == null:
+			continue
+
+		var building_data := BuildingData.new()
+		building_data.scene = scene
+		building_data.display_name = scene.resource_path.get_file().get_basename()
+		available_building_data.append(building_data)
+
+
+func _get_placed_building_count() -> int:
+	var count := 0
+	var build_parent := _get_build_parent()
+	if build_parent == null:
+		return count
+
+	for child in build_parent.get_children():
+		var building := child as Building
+		if building != null and not building.locked:
+			count += 1
+
+	return count

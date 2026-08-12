@@ -9,15 +9,31 @@ signal wrong_value_received(packet: NumberPacket)
 
 var accepted_count: int = 0
 var rejected_count: int = 0
+var is_complete: bool = false
 
 
 func can_accept_packet(_packet: NumberPacket) -> bool:
 	return true
 
 
+func _ready() -> void:
+	_update_value_label()
+
+
 func reset_output() -> void:
 	accepted_count = 0
 	rejected_count = 0
+	is_complete = false
+
+
+func reset_simulation() -> void:
+	reset_output()
+
+
+func configure_from_level_data(level_building_data: LevelBuildingData) -> void:
+	target_value = level_building_data.target_value
+	required_count = level_building_data.required_count
+	_update_value_label()
 
 
 func _on_packet_accepted(packet: NumberPacket) -> void:
@@ -28,5 +44,12 @@ func _on_packet_accepted(packet: NumberPacket) -> void:
 
 	accepted_count += 1
 
-	if accepted_count >= required_count:
+	if not is_complete and accepted_count >= required_count:
+		is_complete = true
 		target_reached.emit(accepted_count)
+
+
+func _update_value_label() -> void:
+	var label := get_node_or_null("ValueLabel") as Label
+	if label != null:
+		label.text = str(target_value)

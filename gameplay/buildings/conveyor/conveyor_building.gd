@@ -10,6 +10,10 @@ func can_accept_packet(_packet: NumberPacket) -> bool:
 	return true
 
 
+func reset_simulation() -> void:
+	_queued_packets.clear()
+
+
 func simulation_tick(delta: float) -> void:
 	for queued_packet in _queued_packets:
 		var remaining_time: float = queued_packet["remaining_time"]

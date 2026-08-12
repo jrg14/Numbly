@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/source/source_building.tscn" id="2_source_scene"]
 
 [resource]
 script = ExtResource("1_building_data")
@@ -8,7 +9,9 @@ id = &"source"
 display_name = "Source"
 description = "Genera paquetes numericos con un valor fijo."
 building_type = 0
+scene = ExtResource("2_source_scene")
 cost = 0
 input_count = 0
 output_count = 1
 tick_interval = 1.0
+placeable = false

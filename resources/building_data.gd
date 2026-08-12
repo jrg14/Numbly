@@ -19,3 +19,4 @@ enum BuildingType {
 @export var input_count: int = 0
 @export var output_count: int = 0
 @export var tick_interval: float = 1.0
+@export var placeable: bool = true

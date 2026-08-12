@@ -1,11 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://gameplay/buildings/conveyor/conveyor_building.gd" id="1_conveyor_script"]
-[ext_resource type="Resource" path="res://data/buildings/conveyor_data.tres" id="2_conveyor_data"]
 
 [node name="ConveyorBuilding" type="Node2D"]
 script = ExtResource("1_conveyor_script")
-building_data = ExtResource("2_conveyor_data")
 travel_time = 0.25
 
 [node name="Body" type="Polygon2D" parent="."]

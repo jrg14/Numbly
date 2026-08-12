@@ -5,6 +5,7 @@ signal cell_occupied(cell: Vector2i, occupant: Node2D)
 signal cell_cleared(cell: Vector2i)
 signal piece_placed(piece: Node2D, cell: Vector2i)
 signal piece_removed(piece: Node2D, cell: Vector2i)
+signal grid_cleared
 
 @export var grid_size: Vector2i = Vector2i(12, 8):
 	set(value):
@@ -103,6 +104,8 @@ func place_piece(piece: Node2D, cell: Vector2i, piece_parent: Node = null) -> bo
 	var parent := piece_parent if piece_parent != null else self
 	if piece.get_parent() == null:
 		parent.add_child(piece)
+	elif piece.get_parent() != parent:
+		piece.reparent(parent)
 
 	piece.global_position = grid_to_world(cell)
 
@@ -124,10 +127,23 @@ func remove_piece_at(cell: Vector2i, free_piece: bool = true) -> Node2D:
 
 	piece_removed.emit(occupant, cell)
 
-	if free_piece and is_instance_valid(occupant):
-		occupant.queue_free()
+	if is_instance_valid(occupant):
+		var parent := occupant.get_parent()
+		if parent != null:
+			parent.remove_child(occupant)
+
+		if free_piece:
+			occupant.queue_free()
 
 	return occupant
+
+
+func clear_all_pieces(free_pieces: bool = true) -> void:
+	for cell in _cells.keys():
+		remove_piece_at(cell, free_pieces)
+
+	grid_cleared.emit()
+	queue_redraw()
 
 
 func get_neighbors(cell: Vector2i, include_diagonals: bool = false) -> Array[Vector2i]:

@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/conveyor/conveyor_building.tscn" id="2_conveyor_scene"]
 
 [resource]
 script = ExtResource("1_building_data")
@@ -8,6 +9,7 @@ id = &"conveyor"
 display_name = "Conveyor"
 description = "Transporta paquetes numericos hacia el siguiente edificio."
 building_type = 1
+scene = ExtResource("2_conveyor_scene")
 cost = 1
 input_count = 1
 output_count = 1

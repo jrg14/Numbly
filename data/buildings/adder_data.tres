@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/addition/addition_building.tscn" id="2_addition_scene"]
 
 [resource]
 script = ExtResource("1_building_data")
@@ -8,6 +9,7 @@ id = &"addition"
 display_name = "Addition"
 description = "Consume dos paquetes numericos y emite la suma."
 building_type = 3
+scene = ExtResource("2_addition_scene")
 cost = 3
 input_count = 2
 output_count = 1
