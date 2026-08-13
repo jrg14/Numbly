@@ -15,6 +15,7 @@ extends Node2D
 @onready var reset_button: Button = $UI/Controls/ResetButton
 @onready var tick_label: Label = $UI/Controls/TickLabel
 @onready var selected_label: Label = $UI/Controls/SelectedLabel
+@onready var medal_progress_label: Label = $UI/MedalProgressLabel
 @onready var status_label: Label = $UI/StatusLabel
 @onready var objective_label: Label = $UI/ObjectiveLabel
 @onready var completion_overlay: Control = $UI/CompletionOverlay
@@ -97,6 +98,7 @@ func _on_selected_building_changed(index: int, _scene: PackedScene) -> void:
 func _on_simulation_tick_completed(tick: int, _tick_delta: float) -> void:
 	tick_label.text = "Tick: %d" % tick
 	level_controller.record_tick(tick, _tick_delta, buildings_root)
+	_refresh_medal_progress()
 
 
 func reset_level() -> void:
@@ -112,6 +114,7 @@ func reset_level() -> void:
 	level_controller.refresh_layout_metrics(buildings_root)
 	simulation_manager.reset_simulation_state()
 	placement_controller.refresh_conveyor_routes()
+	_refresh_medal_progress()
 	var medal_summary := level_controller.get_medal_summary()
 	if medal_summary.is_empty():
 		status_label.text = "Coloca edificios y pulsa Play."
@@ -173,6 +176,7 @@ func _on_layout_changed() -> void:
 	_level_completed = false
 	simulation_manager.reset()
 	level_controller.refresh_layout_metrics(buildings_root)
+	_refresh_medal_progress()
 	status_label.text = "Layout changed. Simulation reset."
 
 
@@ -181,6 +185,7 @@ func _on_level_loaded(level_data: LevelData) -> void:
 	placement_controller.max_placed_buildings = level_data.max_buildings
 	placement_controller.set_available_buildings(level_data.allowed_buildings)
 	_refresh_build_buttons(level_data.allowed_buildings)
+	_refresh_medal_progress()
 
 	var medal_summary := level_controller.get_medal_summary()
 	if not medal_summary.is_empty():
@@ -210,6 +215,28 @@ func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
 
 		if has_building:
 			button.text = available_buildings[i].display_name
+
+
+func _refresh_medal_progress() -> void:
+	var summary := level_controller.get_medal_progress_summary()
+	medal_progress_label.visible = not summary.is_empty()
+	medal_progress_label.text = summary
+	medal_progress_label.add_theme_color_override(
+		"font_color",
+		_get_medal_progress_color(level_controller.get_current_medal_target())
+	)
+
+
+func _get_medal_progress_color(medal: int) -> Color:
+	match medal:
+		LevelMedalData.Medal.GOLD:
+			return Color(1.0, 0.78, 0.18, 1.0)
+		LevelMedalData.Medal.SILVER:
+			return Color(0.78, 0.84, 0.9, 1.0)
+		LevelMedalData.Medal.BRONZE:
+			return Color(0.95, 0.48, 0.18, 1.0)
+		_:
+			return Color(1.0, 0.32, 0.28, 1.0)
 
 
 func _show_completion_overlay(result: LevelResult) -> void:

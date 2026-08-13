@@ -167,6 +167,38 @@ func get_medal_summary() -> String:
 	return " | ".join(lines)
 
 
+func get_medal_progress_summary() -> String:
+	if current_level == null or current_level.medal_conditions.is_empty():
+		return ""
+
+	var target_condition: LevelMedalData = _get_best_available_medal_condition()
+	if target_condition == null:
+		target_condition = _get_medal_condition(LevelMedalData.Medal.BRONZE)
+
+	if target_condition == null:
+		return ""
+
+	var medal_name: String = LevelMedalData.get_medal_name(target_condition.medal)
+	if not target_condition.is_earned(metrics):
+		medal_name = LevelMedalData.get_medal_name(LevelMedalData.Medal.NONE)
+
+	return "Aspirando a %s | Maquinas %d/%d | Tiempo %d/%d ticks" % [
+		medal_name,
+		metrics.placed_buildings,
+		target_condition.max_buildings,
+		metrics.tick_index,
+		target_condition.max_ticks,
+	]
+
+
+func get_current_medal_target() -> int:
+	var target_condition: LevelMedalData = _get_best_available_medal_condition()
+	if target_condition == null:
+		return LevelMedalData.Medal.NONE
+
+	return target_condition.medal
+
+
 func _place_level_building(level_building_data: LevelBuildingData, grid_manager: GridManager, buildings_root: Node) -> bool:
 	if level_building_data == null or level_building_data.building_data == null:
 		return false
@@ -260,5 +292,31 @@ func _get_failed_constraint() -> Objective:
 	for objective in objectives:
 		if objective != null and objective.is_constraint() and objective.is_failed:
 			return objective
+
+	return null
+
+
+func _get_best_available_medal_condition() -> LevelMedalData:
+	var medal_order: Array[int] = [
+		LevelMedalData.Medal.GOLD,
+		LevelMedalData.Medal.SILVER,
+		LevelMedalData.Medal.BRONZE,
+	]
+
+	for medal: int in medal_order:
+		var medal_condition: LevelMedalData = _get_medal_condition(medal)
+		if medal_condition != null and medal_condition.is_earned(metrics):
+			return medal_condition
+
+	return null
+
+
+func _get_medal_condition(medal: int) -> LevelMedalData:
+	if current_level == null:
+		return null
+
+	for medal_condition in current_level.medal_conditions:
+		if medal_condition != null and medal_condition.medal == medal:
+			return medal_condition
 
 	return null
