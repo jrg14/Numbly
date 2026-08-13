@@ -8,6 +8,7 @@ extends Node2D
 @onready var placement_controller: PlacementController = $PlacementController
 @onready var simulation_manager: SimulationManager = $SimulationManager
 @onready var play_pause_button: Button = $UI/Controls/PlayPauseButton
+@onready var menu_button: Button = $UI/Controls/MenuButton
 @onready var undo_button: Button = $UI/Controls/UndoButton
 @onready var redo_button: Button = $UI/Controls/RedoButton
 @onready var reset_button: Button = $UI/Controls/ResetButton
@@ -37,6 +38,7 @@ func _ready() -> void:
 	]
 
 	play_pause_button.pressed.connect(_on_play_pause_pressed)
+	menu_button.pressed.connect(Callable(SceneRouter, "go_to_main_menu"))
 	undo_button.pressed.connect(placement_controller.undo)
 	redo_button.pressed.connect(placement_controller.redo)
 	reset_button.pressed.connect(reset_level)
