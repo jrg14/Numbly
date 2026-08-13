@@ -207,6 +207,7 @@ func undo() -> bool:
 		return false
 
 	_redo_stack.append(command)
+	_update_all_conveyor_routes()
 	history_changed.emit(can_undo(), can_redo())
 	layout_changed.emit()
 	return true
@@ -222,6 +223,7 @@ func redo() -> bool:
 		return false
 
 	_undo_stack.append(command)
+	_update_all_conveyor_routes()
 	history_changed.emit(can_undo(), can_redo())
 	layout_changed.emit()
 	return true
@@ -231,6 +233,10 @@ func clear_history() -> void:
 	_undo_stack.clear()
 	_redo_stack.clear()
 	history_changed.emit(false, false)
+
+
+func refresh_conveyor_routes() -> void:
+	_update_all_conveyor_routes()
 
 
 func can_undo() -> bool:
@@ -317,8 +323,10 @@ func _drag_place_at_screen_position(screen_position: Vector2) -> void:
 		return
 
 	for path_cell in _get_drag_cells_between(_last_drag_cell, cell):
+		var previous_cell: Vector2i = _last_drag_cell
 		var direction: Vector2i = _get_primary_direction(_last_drag_cell, path_cell)
 		_try_drag_place_at_cell(path_cell, direction)
+		_configure_drag_route(previous_cell, path_cell, direction)
 		_last_drag_cell = path_cell
 
 
@@ -360,9 +368,13 @@ func _start_drag_placing() -> void:
 
 
 func _stop_drag_placing() -> void:
+	var was_drag_placing: bool = _is_drag_placing
 	_is_drag_placing = false
 	_last_drag_cell = Vector2i(-9999, -9999)
 	_drag_placed_cells.clear()
+
+	if was_drag_placing:
+		_update_all_conveyor_routes()
 
 
 func _can_drag_place_selected_building() -> bool:
@@ -383,6 +395,16 @@ func _try_drag_place_at_cell(cell: Vector2i, direction: Vector2i) -> void:
 		return
 
 	_place_selected_at(cell, _get_rotation_steps_for_direction(direction))
+
+
+func _configure_drag_route(previous_cell: Vector2i, current_cell: Vector2i, direction: Vector2i) -> void:
+	var current_conveyor := _get_conveyor_at(current_cell)
+	if current_conveyor != null:
+		current_conveyor.configure_route(-direction, direction)
+
+	var previous_conveyor := _get_conveyor_at(previous_cell)
+	if previous_conveyor != null:
+		previous_conveyor.configure_route(previous_conveyor.input_direction, direction)
 
 
 func _get_drag_cells_between(from_cell: Vector2i, to_cell: Vector2i) -> Array[Vector2i]:
@@ -436,6 +458,13 @@ func _get_rotation_steps_for_direction(direction: Vector2i) -> int:
 	return rotation_steps
 
 
+func _get_conveyor_at(cell: Vector2i) -> ConveyorBuilding:
+	if _grid_manager == null or not _grid_manager.is_in_bounds(cell):
+		return null
+
+	return _grid_manager.get_occupant(cell) as ConveyorBuilding
+
+
 func _get_build_parent() -> Node:
 	return _build_parent if _build_parent != null else _grid_manager
 
@@ -458,6 +487,7 @@ func _execute_command(command: BuildCommand) -> bool:
 
 	_undo_stack.append(command)
 	_redo_stack.clear()
+	_update_conveyor_routes_around(command.cell)
 	history_changed.emit(can_undo(), can_redo())
 	layout_changed.emit()
 	return true
@@ -486,3 +516,107 @@ func _get_placed_building_count() -> int:
 			count += 1
 
 	return count
+
+
+func _update_conveyor_routes_around(center_cell: Vector2i) -> void:
+	if _grid_manager == null:
+		return
+
+	for direction in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
+		_update_conveyor_route_at(center_cell + direction)
+
+
+func _update_all_conveyor_routes() -> void:
+	if _grid_manager == null:
+		return
+
+	for _pass_index in range(4):
+		for y in range(_grid_manager.grid_size.y):
+			for x in range(_grid_manager.grid_size.x):
+				_update_conveyor_route_at(Vector2i(x, y))
+
+
+func _update_conveyor_route_at(cell: Vector2i) -> void:
+	var conveyor := _get_conveyor_at(cell)
+	if conveyor == null:
+		return
+
+	var input_options: Array[Vector2i] = []
+	var output_options: Array[Vector2i] = []
+
+	for direction in [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
+		var neighbor := _get_building_at(cell + direction)
+		if neighbor == null:
+			continue
+
+		if _neighbor_can_feed_conveyor(neighbor, direction):
+			input_options.append(direction)
+
+		if _conveyor_can_feed_neighbor(neighbor, direction):
+			output_options.append(direction)
+
+	var output_direction := _choose_output_direction(conveyor, output_options, input_options)
+	var input_direction := _choose_input_direction(conveyor, input_options, output_direction)
+	conveyor.configure_route(input_direction, output_direction)
+
+
+func _choose_output_direction(conveyor: ConveyorBuilding, output_options: Array[Vector2i], input_options: Array[Vector2i]) -> Vector2i:
+	if output_options.has(conveyor.facing):
+		return conveyor.facing
+
+	for direction in output_options:
+		if direction != conveyor.input_direction:
+			return direction
+
+	if output_options.size() > 0:
+		return output_options[0]
+
+	var fallback: Vector2i = conveyor.facing
+	if input_options.size() > 0:
+		fallback = -input_options[0]
+
+	return fallback
+
+
+func _choose_input_direction(conveyor: ConveyorBuilding, input_options: Array[Vector2i], output_direction: Vector2i) -> Vector2i:
+	if input_options.has(conveyor.input_direction) and conveyor.input_direction != output_direction:
+		return conveyor.input_direction
+
+	for direction in input_options:
+		if direction != output_direction:
+			return direction
+
+	return -output_direction
+
+
+func _neighbor_can_feed_conveyor(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:
+	if neighbor is SourceBuilding:
+		return neighbor.facing == -direction_to_neighbor
+
+	if neighbor is ConveyorBuilding:
+		return neighbor.facing == -direction_to_neighbor
+
+	return false
+
+
+func _conveyor_can_feed_neighbor(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:
+	if neighbor is SourceBuilding:
+		return false
+
+	if neighbor is OutputBuilding:
+		return true
+
+	if neighbor is AdditionBuilding:
+		return true
+
+	if neighbor is ConveyorBuilding:
+		return (neighbor as ConveyorBuilding).facing != -direction_to_neighbor
+
+	return neighbor.can_accept_packet(NumberPacket.new())
+
+
+func _get_building_at(cell: Vector2i) -> Building:
+	if _grid_manager == null or not _grid_manager.is_in_bounds(cell):
+		return null
+
+	return _grid_manager.get_occupant(cell) as Building

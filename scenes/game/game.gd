@@ -111,6 +111,7 @@ func reset_level() -> void:
 
 	level_controller.refresh_layout_metrics(buildings_root)
 	simulation_manager.reset_simulation_state()
+	placement_controller.refresh_conveyor_routes()
 	var medal_summary := level_controller.get_medal_summary()
 	if medal_summary.is_empty():
 		status_label.text = "Coloca edificios y pulsa Play."

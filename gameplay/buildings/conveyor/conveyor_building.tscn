@@ -5,7 +5,3 @@
 [node name="ConveyorBuilding" type="Node2D"]
 script = ExtResource("1_conveyor_script")
 travel_time = 0.25
-
-[node name="Body" type="Polygon2D" parent="."]
-color = Color(0.24, 0.42, 0.66, 1)
-polygon = PackedVector2Array(-28, -14, 20, -14, 28, 0, 20, 14, -28, 14)
