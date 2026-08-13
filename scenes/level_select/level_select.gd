@@ -27,9 +27,14 @@ func _populate_levels() -> void:
 			continue
 
 		var button := Button.new()
+		var medal := SaveManager.get_level_medal(level_data.id)
 		button.custom_minimum_size = Vector2(0, 48)
-		button.text = "%s - %s" % [level_data.id, level_data.display_name]
-		button.tooltip_text = level_data.objective_text
+		button.text = "%s  %s - %s" % [
+			LevelMedalData.get_medal_badge(medal),
+			level_data.id,
+			level_data.display_name,
+		]
+		button.tooltip_text = "%s\n%s" % [level_data.objective_text, SaveManager.get_level_summary(level_data.id)]
 		button.pressed.connect(_on_level_pressed.bind(level_path))
 		levels_list.add_child(button)
 

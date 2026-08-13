@@ -15,6 +15,7 @@ signal layout_changed
 @export var available_building_data: Array[BuildingData] = []
 @export var delete_with_right_click: bool = true
 @export var max_placed_buildings: int = 0
+@export var input_enabled: bool = true
 
 var selected_building_index: int = -1
 var rotation_steps: int = 0
@@ -43,10 +44,18 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if not input_enabled:
+		if _placement_preview != null:
+			_placement_preview.hide_preview()
+		return
+
 	_update_preview(get_viewport().get_mouse_position())
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not input_enabled:
+		return
+
 	if event is InputEventKey and event.pressed and not event.echo:
 		_handle_key_input(event)
 		return
@@ -107,7 +116,7 @@ func rotate_clockwise() -> void:
 
 
 func place_selected_at(cell: Vector2i) -> bool:
-	if _grid_manager == null or selected_building_index == -1:
+	if not input_enabled or _grid_manager == null or selected_building_index == -1:
 		return false
 
 	if not _grid_manager.can_place_piece(cell):
@@ -141,7 +150,7 @@ func place_selected_at(cell: Vector2i) -> bool:
 
 
 func remove_piece_at(cell: Vector2i) -> Node2D:
-	if _grid_manager == null or not _grid_manager.is_in_bounds(cell):
+	if not input_enabled or _grid_manager == null or not _grid_manager.is_in_bounds(cell):
 		return null
 
 	var occupant := _grid_manager.get_occupant(cell)

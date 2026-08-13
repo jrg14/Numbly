@@ -115,7 +115,8 @@ Reglas, estado y resultados de cada nivel.
   - Límites de máquinas, espacio, tiempo, throughput o recursos.
 - `level_result.gd`
   - Resultado final del nivel.
-  - Estrellas, puntuación, métricas y estado de completado.
+  - Medalla, puntuación, métricas y estado de completado.
+  - La medalla usa los mismos valores de resultado que la simulación: ticks, tiempo, máquinas y presupuesto.
 
 #### Por qué existe
 
@@ -224,6 +225,7 @@ Definiciones de niveles.
 - recursos iniciales;
 - máquinas permitidas;
 - límites del nivel;
+- condiciones de medalla de bronce, plata y oro;
 - parámetros de progresión.
 
 #### Por qué existe
@@ -399,6 +401,9 @@ Clases base de `Resource` usadas por datos y contenido.
   - Plantilla de configuración de niveles.
 - `objective_data.gd`
   - Base para datos de objetivos.
+- `level_medal_data.gd`
+  - Define los umbrales de bronce, plata y oro.
+  - Cada medalla puede exigir un máximo de ticks y un máximo de máquinas colocadas.
 
 ### Por qué existe
 

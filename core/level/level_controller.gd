@@ -133,6 +133,40 @@ func calculate_stars() -> int:
 	return earned_stars
 
 
+func calculate_medal() -> int:
+	if current_level == null:
+		return LevelMedalData.Medal.NONE
+
+	if current_level.medal_conditions.is_empty():
+		return calculate_stars()
+
+	var earned_medal := LevelMedalData.Medal.NONE
+
+	for medal_condition in current_level.medal_conditions:
+		if medal_condition != null and medal_condition.is_earned(metrics):
+			earned_medal = maxi(earned_medal, medal_condition.medal)
+
+	return earned_medal
+
+
+func get_medal_summary() -> String:
+	if current_level == null or current_level.medal_conditions.is_empty():
+		return ""
+
+	var lines: Array[String] = []
+	for medal_condition in current_level.medal_conditions:
+		if medal_condition == null:
+			continue
+
+		lines.append("%s: max %d ticks, max %d maquinas" % [
+			LevelMedalData.get_medal_name(medal_condition.medal),
+			medal_condition.max_ticks,
+			medal_condition.max_buildings,
+		])
+
+	return " | ".join(lines)
+
+
 func _place_level_building(level_building_data: LevelBuildingData, grid_manager: GridManager, buildings_root: Node) -> bool:
 	if level_building_data == null or level_building_data.building_data == null:
 		return false
@@ -189,9 +223,18 @@ func _update_objectives() -> void:
 		return
 
 	if _all_primary_objectives_complete():
+		var medal := calculate_medal()
+		if current_level.medal_conditions.size() > 0 and medal < LevelMedalData.Medal.BRONZE:
+			level_failed.emit("No alcanza bronce: %d ticks y %d maquinas." % [
+				metrics.tick_index,
+				metrics.placed_buildings,
+			])
+			return
+
 		var result := LevelResult.new()
 		result.completed = true
-		result.stars = calculate_stars()
+		result.medal = medal
+		result.stars = medal
 		result.tick_count = metrics.tick_index
 		result.elapsed_seconds = metrics.elapsed_seconds
 		result.placed_buildings = metrics.placed_buildings

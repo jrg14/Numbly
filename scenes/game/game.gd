@@ -15,6 +15,11 @@ extends Node2D
 @onready var selected_label: Label = $UI/Controls/SelectedLabel
 @onready var status_label: Label = $UI/StatusLabel
 @onready var objective_label: Label = $UI/ObjectiveLabel
+@onready var completion_overlay: Control = $UI/CompletionOverlay
+@onready var completion_medal_label: Label = $UI/CompletionOverlay/Center/Card/Margin/Layout/MedalLabel
+@onready var completion_stats_label: Label = $UI/CompletionOverlay/Center/Card/Margin/Layout/StatsLabel
+@onready var retry_button: Button = $UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons/RetryButton
+@onready var main_menu_button: Button = $UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons/MainMenuButton
 
 var build_buttons: Array[Button] = []
 var _level_completed: bool = false
@@ -35,6 +40,8 @@ func _ready() -> void:
 	undo_button.pressed.connect(placement_controller.undo)
 	redo_button.pressed.connect(placement_controller.redo)
 	reset_button.pressed.connect(reset_level)
+	retry_button.pressed.connect(reset_level)
+	main_menu_button.pressed.connect(Callable(SceneRouter, "go_to_main_menu"))
 	$UI/Controls/RotateButton.pressed.connect(placement_controller.rotate_clockwise)
 
 	for i in range(build_buttons.size()):
@@ -90,6 +97,7 @@ func _on_simulation_tick_completed(tick: int, _tick_delta: float) -> void:
 
 func reset_level() -> void:
 	_level_completed = false
+	_hide_completion_overlay()
 	simulation_manager.reset()
 	placement_controller.clear_history()
 
@@ -98,7 +106,11 @@ func reset_level() -> void:
 
 	level_controller.refresh_layout_metrics(buildings_root)
 	simulation_manager.reset_simulation_state()
-	status_label.text = "Place buildings, then press Play."
+	var medal_summary := level_controller.get_medal_summary()
+	if medal_summary.is_empty():
+		status_label.text = "Coloca edificios y pulsa Play."
+	else:
+		status_label.text = "Coloca edificios y pulsa Play. Medallas: %s" % medal_summary
 
 
 func _on_packet_transferred(packet: NumberPacket, from_building: Building, to_building: Building) -> void:
@@ -118,12 +130,14 @@ func _on_level_completed(result: LevelResult) -> void:
 		return
 
 	_level_completed = true
-	status_label.text = "Objective complete. Stars: %d | Ticks: %d | Budget: %d" % [
-		result.stars,
+	SaveManager.record_level_result(current_level.id, result)
+	status_label.text = "Nivel completado. Medalla: %s | Ticks: %d | Maquinas: %d" % [
+		LevelMedalData.get_medal_name(result.medal),
 		result.tick_count,
-		result.spent_budget,
+		result.placed_buildings,
 	]
 	simulation_manager.pause()
+	_show_completion_overlay(result)
 
 
 func _on_level_failed(message: String) -> void:
@@ -155,6 +169,10 @@ func _on_level_loaded(level_data: LevelData) -> void:
 	placement_controller.set_available_buildings(level_data.allowed_buildings)
 	_refresh_build_buttons(level_data.allowed_buildings)
 
+	var medal_summary := level_controller.get_medal_summary()
+	if not medal_summary.is_empty():
+		status_label.text = "Medallas: %s" % medal_summary
+
 
 func _on_level_load_failed(message: String) -> void:
 	objective_label.text = "Level load failed"
@@ -179,3 +197,18 @@ func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
 
 		if has_building:
 			button.text = available_buildings[i].display_name
+
+
+func _show_completion_overlay(result: LevelResult) -> void:
+	placement_controller.input_enabled = false
+	completion_medal_label.text = LevelMedalData.get_medal_name(result.medal)
+	completion_stats_label.text = "Ticks: %d | Maquinas: %d" % [
+		result.tick_count,
+		result.placed_buildings,
+	]
+	completion_overlay.visible = true
+
+
+func _hide_completion_overlay() -> void:
+	completion_overlay.visible = false
+	placement_controller.input_enabled = true

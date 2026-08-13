@@ -10,6 +10,7 @@ class_name LevelData
 @export var objectives: Array[ObjectiveData] = []
 @export var max_buildings: int = 0
 @export var max_ticks: int = 0
+@export var medal_conditions: Array[LevelMedalData] = []
 @export var star_conditions: Array[StarConditionData] = []
 
 

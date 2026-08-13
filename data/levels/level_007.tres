@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LevelData" load_steps=21 format=3]
+[gd_resource type="Resource" script_class="LevelData" load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://resources/level_data.gd" id="1_level_data"]
 [ext_resource type="Resource" path="res://data/buildings/source_data.tres" id="2_source_data"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://resources/level_building_data.gd" id="6_level_building_data"]
 [ext_resource type="Script" path="res://resources/objective_data.gd" id="7_objective_data"]
 [ext_resource type="Script" path="res://resources/star_condition_data.gd" id="8_star_condition_data"]
+[ext_resource type="Script" path="res://resources/level_medal_data.gd" id="9_level_medal_data"]
 
 [sub_resource type="Resource" id="SourceA"]
 script = ExtResource("6_level_building_data")
@@ -88,6 +89,27 @@ condition_type = 3
 limit = 24
 description = "Spend 24 or less."
 
+[sub_resource type="Resource" id="MedalBronze"]
+script = ExtResource("9_level_medal_data")
+medal = 1
+max_ticks = 420
+max_buildings = 34
+description = "Bronce: completa con 420 ticks o menos y 34 maquinas o menos."
+
+[sub_resource type="Resource" id="MedalSilver"]
+script = ExtResource("9_level_medal_data")
+medal = 2
+max_ticks = 340
+max_buildings = 25
+description = "Plata: completa con 340 ticks o menos y 25 maquinas o menos."
+
+[sub_resource type="Resource" id="MedalGold"]
+script = ExtResource("9_level_medal_data")
+medal = 3
+max_ticks = 260
+max_buildings = 16
+description = "Oro: completa con 260 ticks o menos y 16 maquinas o menos."
+
 [resource]
 script = ExtResource("1_level_data")
 id = &"level_007"
@@ -99,4 +121,5 @@ allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtReso
 objectives = Array[ObjectiveData]([SubResource("Target"), SubResource("MachineLimit"), SubResource("TimeLimit"), SubResource("BudgetLimit")])
 max_buildings = 34
 max_ticks = 420
+medal_conditions = Array[LevelMedalData]([SubResource("MedalBronze"), SubResource("MedalSilver"), SubResource("MedalGold")])
 star_conditions = Array[StarConditionData]([SubResource("StarComplete"), SubResource("StarBuildings"), SubResource("StarTicks"), SubResource("StarBudget")])
