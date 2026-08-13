@@ -16,6 +16,7 @@ signal layout_changed
 @export var delete_with_right_click: bool = true
 @export var max_placed_buildings: int = 0
 @export var input_enabled: bool = true
+@export var drag_place_conveyors: bool = true
 
 var selected_building_index: int = -1
 var rotation_steps: int = 0
@@ -24,6 +25,9 @@ var _grid_manager: GridManager
 var _placement_preview: PlacementPreview
 var _build_parent: Node
 var _last_hovered_cell: Vector2i = Vector2i(-9999, -9999)
+var _is_drag_placing: bool = false
+var _last_drag_cell: Vector2i = Vector2i(-9999, -9999)
+var _drag_placed_cells: Dictionary = {}
 var _undo_stack: Array[BuildCommand] = []
 var _redo_stack: Array[BuildCommand] = []
 
@@ -45,6 +49,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if not input_enabled:
+		_stop_drag_placing()
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
 		return
@@ -64,8 +69,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_mouse_button(event)
 		return
 
-	if event is InputEventScreenTouch and event.pressed:
-		_try_place_at_screen_position(event.position)
+	if event is InputEventMouseButton and not event.pressed:
+		_handle_mouse_release(event)
+		return
+
+	if event is InputEventMouseMotion:
+		_handle_pointer_drag(event.position)
+		return
+
+	if event is InputEventScreenTouch:
+		_handle_touch(event)
+		return
+
+	if event is InputEventScreenDrag:
+		_handle_pointer_drag(event.position)
 
 
 func select_building_index(index: int) -> void:
@@ -78,6 +95,7 @@ func select_building_index(index: int) -> void:
 
 	selected_building_index = index
 	selected_building_changed.emit(index, available_building_data[index].scene)
+	_stop_drag_placing()
 	_update_preview(get_viewport().get_mouse_position())
 
 
@@ -112,10 +130,15 @@ func set_available_buildings(building_data_list: Array[BuildingData]) -> void:
 func rotate_clockwise() -> void:
 	rotation_steps = (rotation_steps + 1) % 4
 	rotation_changed.emit(rotation_steps)
+	_stop_drag_placing()
 	_update_preview(get_viewport().get_mouse_position())
 
 
 func place_selected_at(cell: Vector2i) -> bool:
+	return _place_selected_at(cell, rotation_steps)
+
+
+func _place_selected_at(cell: Vector2i, placement_rotation_steps: int) -> bool:
 	if not input_enabled or _grid_manager == null or selected_building_index == -1:
 		return false
 
@@ -138,7 +161,7 @@ func place_selected_at(cell: Vector2i) -> bool:
 	command.build_parent = _get_build_parent()
 	command.building_data = building_data
 	command.cell = cell
-	command.rotation_steps = rotation_steps
+	command.rotation_steps = placement_rotation_steps
 
 	var placed := _execute_command(command)
 	if placed:
@@ -245,9 +268,37 @@ func _handle_key_input(event: InputEventKey) -> void:
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_LEFT:
-		_try_place_at_screen_position(event.position)
+		_begin_or_place_at_screen_position(event.position)
 	elif event.button_index == MOUSE_BUTTON_RIGHT and delete_with_right_click:
 		_try_remove_at_screen_position(event.position)
+
+
+func _handle_mouse_release(event: InputEventMouseButton) -> void:
+	if event.button_index == MOUSE_BUTTON_LEFT:
+		_stop_drag_placing()
+
+
+func _handle_touch(event: InputEventScreenTouch) -> void:
+	if event.pressed:
+		_begin_or_place_at_screen_position(event.position)
+	else:
+		_stop_drag_placing()
+
+
+func _handle_pointer_drag(screen_position: Vector2) -> void:
+	if not _is_drag_placing:
+		return
+
+	_drag_place_at_screen_position(screen_position)
+
+
+func _begin_or_place_at_screen_position(screen_position: Vector2) -> void:
+	if _can_drag_place_selected_building():
+		_start_drag_placing()
+		_drag_place_at_screen_position(screen_position)
+		return
+
+	_try_place_at_screen_position(screen_position)
 
 
 func _try_place_at_screen_position(screen_position: Vector2) -> void:
@@ -255,6 +306,20 @@ func _try_place_at_screen_position(screen_position: Vector2) -> void:
 		return
 
 	place_selected_at(_grid_manager.world_to_grid(_screen_to_world(screen_position)))
+
+
+func _drag_place_at_screen_position(screen_position: Vector2) -> void:
+	if _grid_manager == null:
+		return
+
+	var cell: Vector2i = _grid_manager.world_to_grid(_screen_to_world(screen_position))
+	if not _grid_manager.is_in_bounds(cell):
+		return
+
+	for path_cell in _get_drag_cells_between(_last_drag_cell, cell):
+		var direction: Vector2i = _get_primary_direction(_last_drag_cell, path_cell)
+		_try_drag_place_at_cell(path_cell, direction)
+		_last_drag_cell = path_cell
 
 
 func _try_remove_at_screen_position(screen_position: Vector2) -> void:
@@ -286,6 +351,89 @@ func _update_preview(screen_position: Vector2) -> void:
 
 func _screen_to_world(screen_position: Vector2) -> Vector2:
 	return get_viewport().get_canvas_transform().affine_inverse() * screen_position
+
+
+func _start_drag_placing() -> void:
+	_is_drag_placing = true
+	_last_drag_cell = Vector2i(-9999, -9999)
+	_drag_placed_cells.clear()
+
+
+func _stop_drag_placing() -> void:
+	_is_drag_placing = false
+	_last_drag_cell = Vector2i(-9999, -9999)
+	_drag_placed_cells.clear()
+
+
+func _can_drag_place_selected_building() -> bool:
+	if not drag_place_conveyors or selected_building_index < 0 or selected_building_index >= available_building_data.size():
+		return false
+
+	var building_data := available_building_data[selected_building_index]
+	return building_data != null and building_data.building_type == BuildingData.BuildingType.CONVEYOR
+
+
+func _try_drag_place_at_cell(cell: Vector2i, direction: Vector2i) -> void:
+	if _drag_placed_cells.has(cell):
+		return
+
+	_drag_placed_cells[cell] = true
+
+	if _grid_manager == null or not _grid_manager.can_place_piece(cell):
+		return
+
+	_place_selected_at(cell, _get_rotation_steps_for_direction(direction))
+
+
+func _get_drag_cells_between(from_cell: Vector2i, to_cell: Vector2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	if from_cell.x < -9000:
+		cells.append(to_cell)
+		return cells
+
+	var delta: Vector2i = to_cell - from_cell
+	var steps: int = maxi(absi(delta.x), absi(delta.y))
+	if steps == 0:
+		cells.append(to_cell)
+		return cells
+
+	for i in range(1, steps + 1):
+		var t: float = float(i) / float(steps)
+		var cell: Vector2i = Vector2i(
+			roundi(lerpf(float(from_cell.x), float(to_cell.x), t)),
+			roundi(lerpf(float(from_cell.y), float(to_cell.y), t))
+		)
+		if cells.is_empty() or cells.back() != cell:
+			cells.append(cell)
+
+	return cells
+
+
+func _get_primary_direction(from_cell: Vector2i, to_cell: Vector2i) -> Vector2i:
+	if from_cell.x < -9000:
+		return _get_facing_from_rotation()
+
+	var delta: Vector2i = to_cell - from_cell
+	if delta == Vector2i.ZERO:
+		return _get_facing_from_rotation()
+
+	if absi(delta.x) >= absi(delta.y):
+		return Vector2i.RIGHT if delta.x > 0 else Vector2i.LEFT
+
+	return Vector2i.DOWN if delta.y > 0 else Vector2i.UP
+
+
+func _get_rotation_steps_for_direction(direction: Vector2i) -> int:
+	if direction == Vector2i.RIGHT:
+		return 0
+	if direction == Vector2i.DOWN:
+		return 1
+	if direction == Vector2i.LEFT:
+		return 2
+	if direction == Vector2i.UP:
+		return 3
+
+	return rotation_steps
 
 
 func _get_build_parent() -> Node:
