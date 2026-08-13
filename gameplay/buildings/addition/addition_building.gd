@@ -1,6 +1,8 @@
 extends Building
 class_name AdditionBuilding
 
+signal sum_created(addition: AdditionBuilding, input_values: Array[int], result: int)
+
 @export var input_count: int = 2
 @export var max_buffer_size: int = 8
 
@@ -51,16 +53,19 @@ func _on_packet_accepted_from(packet: NumberPacket, from_building: Building) -> 
 func _try_emit_sum() -> void:
 	while _has_ready_inputs():
 		var result := 0
+		var input_values: Array[int] = []
 
 		for i in range(input_count):
 			var lane := _lane_order[i]
 			var lane_buffer := _input_buffers[lane] as Array
 			var packet := lane_buffer.pop_front() as NumberPacket
+			input_values.append(packet.value)
 			result += packet.value
 
 		var output_packet := NumberPacket.new()
 		output_packet.value = result
 		output_packet.source_id = &"addition"
+		sum_created.emit(self, input_values, result)
 		emit_packet(output_packet)
 
 

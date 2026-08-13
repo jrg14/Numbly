@@ -4,6 +4,7 @@ extends Node2D
 
 @onready var grid_manager: GridManager = $GridManager
 @onready var buildings_root: Node2D = $Buildings
+@onready var packet_visualizer: PacketVisualizer = $PacketVisuals
 @onready var level_controller: LevelController = $LevelController
 @onready var placement_controller: PlacementController = $PlacementController
 @onready var simulation_manager: SimulationManager = $SimulationManager
@@ -65,6 +66,7 @@ func _ready() -> void:
 	simulation_manager.packet_blocked.connect(_on_packet_blocked)
 	simulation_manager.output_packet_consumed.connect(_on_output_packet_consumed)
 	simulation_manager.connection_error.connect(_on_connection_error)
+	simulation_manager.addition_sum_created.connect(_on_addition_sum_created)
 
 	reset_level()
 	_refresh_play_pause_label()
@@ -100,6 +102,7 @@ func _on_simulation_tick_completed(tick: int, _tick_delta: float) -> void:
 func reset_level() -> void:
 	_level_completed = false
 	_hide_completion_overlay()
+	packet_visualizer.clear_visuals()
 	simulation_manager.reset()
 	placement_controller.clear_history()
 
@@ -116,15 +119,22 @@ func reset_level() -> void:
 
 
 func _on_packet_transferred(packet: NumberPacket, from_building: Building, to_building: Building) -> void:
+	packet_visualizer.show_transfer(packet, from_building, to_building)
 	status_label.text = "Packet %d: %s -> %s" % [packet.value, from_building.name, to_building.name]
 
 
 func _on_packet_blocked(packet: NumberPacket, from_building: Building, target_cell: Vector2i) -> void:
+	packet_visualizer.show_blocked(packet, from_building, grid_manager.grid_to_world(target_cell))
 	status_label.text = "Packet %d blocked from %s at %s" % [packet.value, from_building.name, target_cell]
 
 
 func _on_output_packet_consumed(packet: NumberPacket, _output: OutputBuilding, matched_target: bool) -> void:
+	packet_visualizer.show_output_received(packet, _output, matched_target)
 	level_controller.record_output_packet(packet, matched_target, buildings_root)
+
+
+func _on_addition_sum_created(addition: AdditionBuilding, input_values: Array[int], result: int) -> void:
+	packet_visualizer.show_addition(addition, input_values, result)
 
 
 func _on_level_completed(result: LevelResult) -> void:

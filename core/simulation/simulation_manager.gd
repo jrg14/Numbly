@@ -8,6 +8,7 @@ signal packet_transferred(packet: NumberPacket, from_building: Building, to_buil
 signal packet_blocked(packet: NumberPacket, from_building: Building, target_cell: Vector2i)
 signal output_packet_consumed(packet: NumberPacket, output: OutputBuilding, matched_target: bool)
 signal output_target_reached(output: OutputBuilding, total_accepted: int)
+signal addition_sum_created(addition: AdditionBuilding, input_values: Array[int], result: int)
 signal connection_error(message: String)
 
 @export_range(1, 120, 1) var ticks_per_second: int = 10:
@@ -28,6 +29,7 @@ var _simulated_root: Node
 var _grid_manager: GridManager
 var _connected_buildings: Dictionary = {}
 var _connected_outputs: Dictionary = {}
+var _connected_additions: Dictionary = {}
 
 
 func _ready() -> void:
@@ -84,6 +86,7 @@ func reset() -> void:
 func reset_simulation_state() -> void:
 	_connected_buildings.clear()
 	_connected_outputs.clear()
+	_connected_additions.clear()
 
 	for node in _get_simulated_nodes():
 		if node.has_method("reset_simulation"):
@@ -142,6 +145,13 @@ func _sync_building_connections() -> void:
 				output.packet_consumed.connect(packet_consumed_callable)
 			_connected_outputs[output] = true
 
+		var addition := node as AdditionBuilding
+		if addition != null and not _connected_additions.has(addition):
+			var sum_callable := Callable(self, "_on_addition_sum_created")
+			if not addition.sum_created.is_connected(sum_callable):
+				addition.sum_created.connect(sum_callable)
+			_connected_additions[addition] = true
+
 
 func _on_building_packet_output(packet: NumberPacket, from_building: Building) -> void:
 	if _grid_manager == null:
@@ -168,3 +178,7 @@ func _on_output_target_reached(total_accepted: int, output: OutputBuilding) -> v
 
 func _on_output_packet_consumed(packet: NumberPacket, matched_target: bool, output: OutputBuilding) -> void:
 	output_packet_consumed.emit(packet, output, matched_target)
+
+
+func _on_addition_sum_created(addition: AdditionBuilding, input_values: Array[int], result: int) -> void:
+	addition_sum_created.emit(addition, input_values, result)
