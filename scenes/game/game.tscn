@@ -113,6 +113,7 @@ vertical_alignment = 1
 text = "Tick: 0"
 
 [node name="ObjectiveLabel" type="Label" parent="UI"]
+visible = false
 offset_left = 16.0
 offset_top = 64.0
 offset_right = 520.0
@@ -121,13 +122,14 @@ text = "Objective: produce 5 from sources 2 and 3"
 
 [node name="MedalProgressLabel" type="Label" parent="UI"]
 offset_left = 16.0
-offset_top = 88.0
+offset_top = 64.0
 offset_right = 760.0
-offset_bottom = 112.0
+offset_bottom = 88.0
 theme_override_font_sizes/font_size = 18
-text = "Aspirando a Oro | Maquinas 0/10 | Tiempo 0/180 ticks"
+text = "Aspirando a Oro | Maquinas 0/10 | Tiempo 0.0s/18.0s"
 
 [node name="StatusLabel" type="Label" parent="UI"]
+visible = false
 offset_left = 16.0
 offset_top = 112.0
 offset_right = 720.0
@@ -164,7 +166,7 @@ grow_vertical = 2
 mouse_filter = 1
 
 [node name="Card" type="PanelContainer" parent="UI/CompletionOverlay/Center"]
-custom_minimum_size = Vector2(420, 260)
+custom_minimum_size = Vector2(560, 260)
 layout_mode = 2
 mouse_filter = 0
 
@@ -205,6 +207,11 @@ theme_override_constants/separation = 12
 custom_minimum_size = Vector2(144, 44)
 layout_mode = 2
 text = "Intentar de nuevo"
+
+[node name="NextLevelButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons"]
+custom_minimum_size = Vector2(144, 44)
+layout_mode = 2
+text = "Siguiente nivel"
 
 [node name="MainMenuButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons"]
 custom_minimum_size = Vector2(144, 44)

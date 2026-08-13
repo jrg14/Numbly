@@ -591,7 +591,7 @@ func _choose_input_direction(conveyor: ConveyorBuilding, input_options: Array[Ve
 
 func _neighbor_can_feed_conveyor(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:
 	if neighbor is SourceBuilding:
-		return neighbor.facing == -direction_to_neighbor
+		return true
 
 	if neighbor is ConveyorBuilding:
 		return neighbor.facing == -direction_to_neighbor

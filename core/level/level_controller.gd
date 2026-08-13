@@ -167,7 +167,7 @@ func get_medal_summary() -> String:
 	return " | ".join(lines)
 
 
-func get_medal_progress_summary() -> String:
+func get_medal_progress_summary(ticks_per_second: int = 10) -> String:
 	if current_level == null or current_level.medal_conditions.is_empty():
 		return ""
 
@@ -182,12 +182,15 @@ func get_medal_progress_summary() -> String:
 	if not target_condition.is_earned(metrics):
 		medal_name = LevelMedalData.get_medal_name(LevelMedalData.Medal.NONE)
 
-	return "Aspirando a %s | Maquinas %d/%d | Tiempo %d/%d ticks" % [
+	var safe_ticks_per_second: int = maxi(ticks_per_second, 1)
+	var target_seconds: float = float(target_condition.max_ticks) / float(safe_ticks_per_second)
+
+	return "Aspirando a %s | Maquinas %d/%d | Tiempo %.1fs/%.1fs" % [
 		medal_name,
 		metrics.placed_buildings,
 		target_condition.max_buildings,
-		metrics.tick_index,
-		target_condition.max_ticks,
+		metrics.elapsed_seconds,
+		target_seconds,
 	]
 
 

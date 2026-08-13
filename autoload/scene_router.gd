@@ -18,6 +18,6 @@ func go_to_game() -> void:
 
 
 func _change_scene(scene_path: String) -> void:
-	var error := get_tree().change_scene_to_file(scene_path)
+	var error: Error = get_tree().change_scene_to_file(scene_path)
 	if error != OK:
 		push_error("Could not change scene to %s. Error: %s" % [scene_path, error])

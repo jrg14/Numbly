@@ -9,7 +9,7 @@ packets_per_second = 1.0
 
 [node name="Body" type="Polygon2D" parent="."]
 color = Color(0.18, 0.62, 0.42, 1)
-polygon = PackedVector2Array(-24, -24, 24, 0, -24, 24)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
 
 [node name="ValueLabel" type="Label" parent="."]
 offset_left = -8.0

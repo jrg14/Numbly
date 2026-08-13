@@ -154,17 +154,29 @@ func _sync_building_connections() -> void:
 
 
 func _on_building_packet_output(packet: NumberPacket, from_building: Building) -> void:
-	if _grid_manager == null:
+	if _grid_manager == null or packet == null or from_building == null:
 		return
 
-	var target_cell := from_building.grid_position + from_building.facing
-	var target_building := _grid_manager.get_occupant(target_cell) as Building
+	if from_building is SourceBuilding:
+		for direction in [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
+			_route_packet_to_direction(packet.duplicate_packet(), from_building, direction, true)
+		return
+
+	_route_packet_to_direction(packet, from_building, from_building.facing, false)
+
+
+func _route_packet_to_direction(packet: NumberPacket, from_building: Building, direction: Vector2i, skip_empty: bool) -> void:
+	var target_cell: Vector2i = from_building.grid_position + direction
+	var target_building: Building = _grid_manager.get_occupant(target_cell) as Building
 
 	if target_building != null and target_building.accept_packet_from(packet, from_building):
 		packet_transferred.emit(packet, from_building, target_building)
 		return
 
 	if target_building == null:
+		if skip_empty:
+			return
+
 		connection_error.emit("No receiver at %s for packet %d from %s." % [target_cell, packet.value, from_building.name])
 	else:
 		connection_error.emit("%s rejected packet %d from %s." % [target_building.name, packet.value, from_building.name])
