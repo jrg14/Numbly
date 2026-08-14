@@ -11,6 +11,7 @@
 **Estado:** Concepto / Preproducción
 
 > Nota: este documento describe la visión de diseño. El comportamiento implementado actualmente está documentado en [`current-gameplay.md`](current-gameplay.md).
+> Los objetivos jugables pendientes están recogidos en [`gameplay-roadmap.md`](gameplay-roadmap.md).
 
 ---
 

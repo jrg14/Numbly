@@ -34,6 +34,7 @@ El objetivo no es solo ordenar archivos:
 
 - [`gdd.md`](gdd.md): visión de diseño del juego.
 - [`current-gameplay.md`](current-gameplay.md): comportamiento implementado actualmente.
+- [`gameplay-roadmap.md`](gameplay-roadmap.md): objetivos jugables pendientes y prioridades.
 
 ---
 

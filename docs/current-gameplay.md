@@ -4,6 +4,8 @@ Este documento describe cómo funciona `Numbly` en el estado actual del código.
 
 La intención de diseño general vive en [`docs/gdd.md`](gdd.md). Este archivo, en cambio, documenta el comportamiento implementado: flujo de nivel, construcción, simulación, edificios, objetivos, medallas y progreso.
 
+Los objetivos jugables pendientes están recogidos en [`gameplay-roadmap.md`](gameplay-roadmap.md).
+
 ## Resumen
 
 `Numbly` es actualmente un puzzle de automatización numérica por niveles.
