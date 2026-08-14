@@ -10,6 +10,8 @@
 **Duración de sesión objetivo:** 3–10 minutos
 **Estado:** Concepto / Preproducción
 
+> Nota: este documento describe la visión de diseño. El comportamiento implementado actualmente está documentado en [`current-gameplay.md`](current-gameplay.md).
+
 ---
 
 # 1. High Concept

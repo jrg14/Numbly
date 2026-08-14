@@ -6,6 +6,7 @@
 script = ExtResource("1_addition_script")
 input_count = 2
 max_buffer_size = 8
+operation_interval_ticks = 10
 
 [node name="Body" type="Polygon2D" parent="."]
 color = Color(0.82, 0.68, 0.22, 1)

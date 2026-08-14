@@ -233,6 +233,15 @@ func _configure_level_piece(piece: Node2D, level_building_data: LevelBuildingDat
 	if building.has_method("configure_from_level_data"):
 		building.configure_from_level_data(level_building_data)
 
+	var output := building as OutputBuilding
+	if output != null:
+		var target_value := level_building_data.target_value
+		var required_count := level_building_data.required_count
+		if required_count <= 0:
+			required_count = _get_required_count_for_output_target(target_value)
+
+		output.configure_requirements(target_value, required_count)
+
 
 func _create_objectives(objective_data_list: Array[ObjectiveData]) -> Array[Objective]:
 	var created_objectives: Array[Objective] = []
@@ -243,6 +252,27 @@ func _create_objectives(objective_data_list: Array[ObjectiveData]) -> Array[Obje
 			created_objectives.append(objective)
 
 	return created_objectives
+
+
+func _get_required_count_for_output_target(target_value: int) -> int:
+	var required_count := 1
+
+	if current_level == null:
+		return required_count
+
+	for objective_data in current_level.objectives:
+		if objective_data == null:
+			continue
+
+		if objective_data.objective_type != ObjectiveData.ObjectiveType.TARGET_VALUE:
+			continue
+
+		if objective_data.is_constraint or objective_data.target_value != target_value:
+			continue
+
+		required_count = maxi(required_count, objective_data.required_count)
+
+	return required_count
 
 
 func _update_objectives() -> void:

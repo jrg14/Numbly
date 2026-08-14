@@ -30,6 +30,11 @@ El objetivo no es solo ordenar archivos:
 - `tests/`: pruebas y escenarios de validación.
 - `project.godot`: configuración principal de Godot.
 
+## Documentos relacionados
+
+- [`gdd.md`](gdd.md): visión de diseño del juego.
+- [`current-gameplay.md`](current-gameplay.md): comportamiento implementado actualmente.
+
 ---
 
 ## `autoload/`

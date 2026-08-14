@@ -7,8 +7,11 @@ class_name LevelBuildingData
 @export var locked: bool = false
 @export var generated_value: int = 0
 @export var packets_per_second: float = 1.0
+@export var generation_interval_ticks: int = 10
 @export var target_value: int = 0
-@export var required_count: int = 1
+@export var required_count: int = 0
+@export var max_buffer_size: int = 8
+@export var operation_interval_ticks: int = 10
 
 
 func get_facing() -> Vector2i:

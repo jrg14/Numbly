@@ -14,7 +14,7 @@ func get_progress_text(metrics: LevelMetrics = null) -> String:
 		return "Target value"
 
 	var current_count := metrics.get_matched_output_count(data.target_value) if metrics != null else 0
-	return "Produce %d: %d/%d" % [
+	return "Numero %d conseguido: %d/%d" % [
 		data.target_value,
 		current_count,
 		data.required_count,

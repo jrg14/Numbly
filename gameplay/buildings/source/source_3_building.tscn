@@ -6,6 +6,7 @@
 script = ExtResource("1_source_script")
 generated_value = 3
 packets_per_second = 1.0
+generation_interval_ticks = 10
 source_label = &"source_3"
 
 [node name="Body" type="Polygon2D" parent="."]

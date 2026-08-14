@@ -5,9 +5,11 @@ signal sum_created(addition: AdditionBuilding, input_values: Array[int], result:
 
 @export var input_count: int = 2
 @export var max_buffer_size: int = 8
+@export var operation_interval_ticks: int = 1000
 
 var _input_buffers: Dictionary = {}
 var _lane_order: Array[Vector2i] = []
+var _ticks_until_next_operation: int = 0
 
 
 func can_accept_packet(_packet: NumberPacket) -> bool:
@@ -17,6 +19,19 @@ func can_accept_packet(_packet: NumberPacket) -> bool:
 func reset_simulation() -> void:
 	_input_buffers.clear()
 	_lane_order.clear()
+	_ticks_until_next_operation = 0
+
+
+func configure_from_level_data(level_building_data: LevelBuildingData) -> void:
+	max_buffer_size = maxi(level_building_data.max_buffer_size, 1)
+	operation_interval_ticks = maxi(level_building_data.operation_interval_ticks, 1)
+
+
+func simulation_tick(_delta: float) -> void:
+	if _ticks_until_next_operation > 0:
+		_ticks_until_next_operation -= 1
+
+	_try_emit_sum()
 
 
 func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bool:
@@ -51,22 +66,25 @@ func _on_packet_accepted_from(packet: NumberPacket, from_building: Building) -> 
 
 
 func _try_emit_sum() -> void:
-	while _has_ready_inputs():
-		var result := 0
-		var input_values: Array[int] = []
+	if _ticks_until_next_operation > 0 or not _has_ready_inputs():
+		return
 
-		for i in range(input_count):
-			var lane := _lane_order[i]
-			var lane_buffer := _input_buffers[lane] as Array
-			var packet := lane_buffer.pop_front() as NumberPacket
-			input_values.append(packet.value)
-			result += packet.value
+	var result := 0
+	var input_values: Array[int] = []
 
-		var output_packet := NumberPacket.new()
-		output_packet.value = result
-		output_packet.source_id = &"addition"
-		sum_created.emit(self, input_values, result)
-		emit_packet(output_packet)
+	for i in range(input_count):
+		var lane := _lane_order[i]
+		var lane_buffer := _input_buffers[lane] as Array
+		var packet := lane_buffer.pop_front() as NumberPacket
+		input_values.append(packet.value)
+		result += packet.value
+
+	var output_packet := NumberPacket.new()
+	output_packet.value = result
+	output_packet.source_id = &"addition"
+	sum_created.emit(self, input_values, result)
+	emit_packet(output_packet)
+	_ticks_until_next_operation = maxi(operation_interval_ticks, 1)
 
 
 func _has_ready_inputs() -> bool:

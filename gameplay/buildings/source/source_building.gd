@@ -3,22 +3,23 @@ class_name SourceBuilding
 
 @export var generated_value: int = 1
 @export var packets_per_second: float = 1.0
+@export var generation_interval_ticks: int = 10
 @export var source_label: StringName
 
-var _time_until_next_packet: float = 0.0
+var _ticks_until_next_packet: int = 0
 
 
 func _ready() -> void:
-	_time_until_next_packet = _get_emit_interval()
+	_ticks_until_next_packet = _get_generation_interval_ticks()
 	_update_value_label()
 
 
-func simulation_tick(delta: float) -> void:
-	_time_until_next_packet -= delta
+func simulation_tick(_delta: float) -> void:
+	_ticks_until_next_packet -= 1
 
-	while _time_until_next_packet <= 0.0:
+	if _ticks_until_next_packet <= 0:
 		emit_packet(_create_packet())
-		_time_until_next_packet += _get_emit_interval()
+		_ticks_until_next_packet += _get_generation_interval_ticks()
 
 
 func can_accept_packet(_packet: NumberPacket) -> bool:
@@ -26,12 +27,13 @@ func can_accept_packet(_packet: NumberPacket) -> bool:
 
 
 func reset_simulation() -> void:
-	_time_until_next_packet = _get_emit_interval()
+	_ticks_until_next_packet = _get_generation_interval_ticks()
 
 
 func configure_from_level_data(level_building_data: LevelBuildingData) -> void:
 	generated_value = level_building_data.generated_value
 	packets_per_second = level_building_data.packets_per_second
+	generation_interval_ticks = level_building_data.generation_interval_ticks
 	source_label = StringName("source_%d" % generated_value)
 	_update_value_label()
 
@@ -43,11 +45,8 @@ func _create_packet() -> NumberPacket:
 	return packet
 
 
-func _get_emit_interval() -> float:
-	if packets_per_second <= 0.0:
-		return INF
-
-	return 1.0 / packets_per_second
+func _get_generation_interval_ticks() -> int:
+	return maxi(generation_interval_ticks, 1)
 
 
 func _update_value_label() -> void:

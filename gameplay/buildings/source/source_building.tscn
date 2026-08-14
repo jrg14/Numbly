@@ -6,6 +6,7 @@
 script = ExtResource("1_source_script")
 generated_value = 1
 packets_per_second = 1.0
+generation_interval_ticks = 10
 
 [node name="Body" type="Polygon2D" parent="."]
 color = Color(0.18, 0.62, 0.42, 1)
