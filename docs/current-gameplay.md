@@ -262,6 +262,22 @@ Actualmente se visualiza:
 
 También se actualiza `status_label` con mensajes como transferencia, bloqueo, error o completado.
 
+## Vista de rutas
+
+La vista de rutas está implementada con `gameplay/placement/route_overlay.gd`.
+
+Comportamiento actual:
+
+- al pasar el cursor sobre un edificio colocado, se resaltan sus entradas y salidas;
+- al pasar el cursor sobre una celda libre con un edificio seleccionable, se muestran las rutas previstas de la preview;
+- las flechas verdes indican salidas;
+- las flechas azules indican entradas;
+- las marcas tenues indican conexiones potenciales sin vecino conectado;
+- las marcas rojas indican vecino ocupado pero conexión no válida;
+- la vista se oculta al salir del grid o cuando la entrada de construcción está deshabilitada.
+
+La primera versión no crea un estado persistente de selección de edificios colocados. Usa el hover actual del `PlacementController`, porque el juego todavía no tiene una acción separada de seleccionar una máquina existente.
+
 ## Objetivos
 
 Los objetivos están definidos en `resources/objective_data.gd` y se instancian desde `gameplay/objectives/objective.gd`.

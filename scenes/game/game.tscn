@@ -1,118 +1,135 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3 uid="uid://bvxh78vkfxeht"]
 
-[ext_resource type="Script" path="res://scenes/game/game.gd" id="1_game_script"]
-[ext_resource type="Script" path="res://core/grid/grid_manager.gd" id="2_grid_manager"]
-[ext_resource type="Script" path="res://gameplay/placement/placement_preview.gd" id="3_placement_preview"]
-[ext_resource type="Script" path="res://gameplay/placement/placement_controller.gd" id="4_placement_controller"]
-[ext_resource type="Script" path="res://core/simulation/simulation_manager.gd" id="5_simulation_manager"]
-[ext_resource type="Resource" path="res://data/levels/level_001.tres" id="6_level_001"]
-[ext_resource type="Script" path="res://core/level/level_controller.gd" id="7_level_controller"]
-[ext_resource type="Script" path="res://core/simulation/packet_visualizer.gd" id="8_packet_visualizer"]
+[ext_resource type="Script" uid="uid://cqe874ifwb6fu" path="res://scenes/game/game.gd" id="1_game_script"]
+[ext_resource type="Script" uid="uid://cvrhb3je2wwb1" path="res://core/grid/grid_manager.gd" id="2_grid_manager"]
+[ext_resource type="Script" uid="uid://d3gubjangmuyc" path="res://gameplay/placement/placement_preview.gd" id="3_placement_preview"]
+[ext_resource type="Script" uid="uid://bakqt4jf8w16k" path="res://gameplay/placement/placement_controller.gd" id="4_placement_controller"]
+[ext_resource type="Script" uid="uid://cshk6lxgcoqpr" path="res://core/simulation/simulation_manager.gd" id="5_simulation_manager"]
+[ext_resource type="Resource" uid="uid://bqy8ek5ur6wwg" path="res://data/levels/level_001.tres" id="6_level_001"]
+[ext_resource type="Script" uid="uid://c0pjas8tvnm5r" path="res://core/level/level_controller.gd" id="7_level_controller"]
+[ext_resource type="Script" uid="uid://6xuxd6fdadxd" path="res://core/simulation/packet_visualizer.gd" id="8_packet_visualizer"]
+[ext_resource type="Script" uid="uid://clcrh70emy2gg" path="res://gameplay/placement/route_overlay.gd" id="9_route_overlay"]
 
-[node name="Game" type="Node2D"]
+[node name="Game" type="Node2D" unique_id=13690492]
 script = ExtResource("1_game_script")
 current_level = ExtResource("6_level_001")
 
-[node name="GridManager" type="Node2D" parent="."]
+[node name="GridManager" type="Node2D" parent="." unique_id=660713810]
 position = Vector2(96, 112)
 script = ExtResource("2_grid_manager")
-grid_size = Vector2i(8, 8)
-cell_size = Vector2(64, 64)
+grid_size = Vector2i(10, 10)
 
-[node name="Buildings" type="Node2D" parent="."]
+[node name="Buildings" type="Node2D" parent="." unique_id=1403444393]
 
-[node name="PacketVisuals" type="Node2D" parent="."]
+[node name="PacketVisuals" type="Node2D" parent="." unique_id=1000396547]
 z_index = 50
 script = ExtResource("8_packet_visualizer")
 
-[node name="LevelController" type="Node" parent="."]
+[node name="RouteOverlay" type="Node2D" parent="." unique_id=76336446]
+z_index = 45
+script = ExtResource("9_route_overlay")
+grid_manager_path = NodePath("../GridManager")
+
+[node name="LevelController" type="Node" parent="." unique_id=365809654]
 script = ExtResource("7_level_controller")
 
-[node name="PlacementPreview" type="Node2D" parent="."]
+[node name="PlacementPreview" type="Node2D" parent="." unique_id=542016533]
 visible = false
 script = ExtResource("3_placement_preview")
 
-[node name="PlacementController" type="Node" parent="."]
+[node name="PlacementController" type="Node" parent="." unique_id=143802461]
 script = ExtResource("4_placement_controller")
 grid_manager_path = NodePath("../GridManager")
 placement_preview_path = NodePath("../PlacementPreview")
 build_parent_path = NodePath("../Buildings")
 
-[node name="SimulationManager" type="Node" parent="."]
+[node name="SimulationManager" type="Node" parent="." unique_id=1087015699]
 script = ExtResource("5_simulation_manager")
-ticks_per_second = 10
 simulated_root_path = NodePath("../Buildings")
 grid_manager_path = NodePath("../GridManager")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=180752919]
 
-[node name="Controls" type="HBoxContainer" parent="UI"]
+[node name="Controls" type="HBoxContainer" parent="UI" unique_id=2115149113]
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 620.0
 offset_bottom = 56.0
 theme_override_constants/separation = 8
 
-[node name="PlayPauseButton" type="Button" parent="UI/Controls"]
+[node name="PlayPauseButton" type="Button" parent="UI/Controls" unique_id=428975307]
 custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Play"
 
-[node name="MenuButton" type="Button" parent="UI/Controls"]
+[node name="MenuButton" type="Button" parent="UI/Controls" unique_id=214811496]
 custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Menu"
 
-[node name="UndoButton" type="Button" parent="UI/Controls"]
+[node name="UndoButton" type="Button" parent="UI/Controls" unique_id=444035014]
 custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 disabled = true
 text = "Undo"
 
-[node name="RedoButton" type="Button" parent="UI/Controls"]
+[node name="RedoButton" type="Button" parent="UI/Controls" unique_id=2083328890]
 custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 disabled = true
 text = "Redo"
 
-[node name="ResetButton" type="Button" parent="UI/Controls"]
+[node name="ResetButton" type="Button" parent="UI/Controls" unique_id=1955970636]
 custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Reset"
 
-[node name="BuildButton1" type="Button" parent="UI/Controls"]
+[node name="BuildButton1" type="Button" parent="UI/Controls" unique_id=1469036430]
 custom_minimum_size = Vector2(104, 40)
+layout_mode = 2
 text = "Conveyor"
 
-[node name="BuildButton2" type="Button" parent="UI/Controls"]
+[node name="BuildButton2" type="Button" parent="UI/Controls" unique_id=1656974707]
 custom_minimum_size = Vector2(96, 40)
+layout_mode = 2
 text = "Addition"
 
-[node name="BuildButton3" type="Button" parent="UI/Controls"]
-custom_minimum_size = Vector2(88, 40)
+[node name="BuildButton3" type="Button" parent="UI/Controls" unique_id=51967921]
 visible = false
+custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Build 3"
 
-[node name="BuildButton4" type="Button" parent="UI/Controls"]
-custom_minimum_size = Vector2(88, 40)
+[node name="BuildButton4" type="Button" parent="UI/Controls" unique_id=1070503120]
 visible = false
+custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Build 4"
 
-[node name="BuildButton5" type="Button" parent="UI/Controls"]
-custom_minimum_size = Vector2(88, 40)
+[node name="BuildButton5" type="Button" parent="UI/Controls" unique_id=909421574]
 visible = false
+custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Build 5"
 
-[node name="RotateButton" type="Button" parent="UI/Controls"]
+[node name="RotateButton" type="Button" parent="UI/Controls" unique_id=432743959]
 custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
 text = "Rotate"
 
-[node name="SelectedLabel" type="Label" parent="UI/Controls"]
+[node name="SelectedLabel" type="Label" parent="UI/Controls" unique_id=229760538]
 custom_minimum_size = Vector2(144, 40)
-vertical_alignment = 1
+layout_mode = 2
 text = "Selected: Source"
-
-[node name="TickLabel" type="Label" parent="UI/Controls"]
-custom_minimum_size = Vector2(88, 40)
 vertical_alignment = 1
-text = "Tick: 0"
 
-[node name="ObjectiveLabel" type="Label" parent="UI"]
+[node name="TickLabel" type="Label" parent="UI/Controls" unique_id=1087121898]
+custom_minimum_size = Vector2(88, 40)
+layout_mode = 2
+text = "Tick: 0"
+vertical_alignment = 1
+
+[node name="ObjectiveLabel" type="Label" parent="UI" unique_id=609476794]
 visible = false
 offset_left = 16.0
 offset_top = 64.0
@@ -120,7 +137,7 @@ offset_right = 520.0
 offset_bottom = 88.0
 text = "Objective: produce 5 from sources 2 and 3"
 
-[node name="MedalProgressLabel" type="Label" parent="UI"]
+[node name="MedalProgressLabel" type="Label" parent="UI" unique_id=224064499]
 offset_left = 16.0
 offset_top = 64.0
 offset_right = 760.0
@@ -128,7 +145,7 @@ offset_bottom = 88.0
 theme_override_font_sizes/font_size = 18
 text = "Aspirando a Oro | Maquinas 0/10 | Tiempo 0.0s/18.0s"
 
-[node name="StatusLabel" type="Label" parent="UI"]
+[node name="StatusLabel" type="Label" parent="UI" unique_id=830790399]
 visible = false
 offset_left = 16.0
 offset_top = 112.0
@@ -136,7 +153,7 @@ offset_right = 720.0
 offset_bottom = 136.0
 text = "Place conveyors and Addition, then press Play."
 
-[node name="CompletionOverlay" type="Control" parent="UI"]
+[node name="CompletionOverlay" type="Control" parent="UI" unique_id=328817578]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -144,76 +161,72 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 
-[node name="Dim" type="ColorRect" parent="UI/CompletionOverlay"]
+[node name="Dim" type="ColorRect" parent="UI/CompletionOverlay" unique_id=648272733]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 color = Color(0, 0, 0, 0.62)
 
-[node name="Center" type="CenterContainer" parent="UI/CompletionOverlay"]
+[node name="Center" type="CenterContainer" parent="UI/CompletionOverlay" unique_id=1748620711]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
 
-[node name="Card" type="PanelContainer" parent="UI/CompletionOverlay/Center"]
+[node name="Card" type="PanelContainer" parent="UI/CompletionOverlay/Center" unique_id=1029771540]
 custom_minimum_size = Vector2(560, 260)
 layout_mode = 2
-mouse_filter = 0
 
-[node name="Margin" type="MarginContainer" parent="UI/CompletionOverlay/Center/Card"]
+[node name="Margin" type="MarginContainer" parent="UI/CompletionOverlay/Center/Card" unique_id=1254999715]
 layout_mode = 2
 theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 28
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 28
 
-[node name="Layout" type="VBoxContainer" parent="UI/CompletionOverlay/Center/Card/Margin"]
+[node name="Layout" type="VBoxContainer" parent="UI/CompletionOverlay/Center/Card/Margin" unique_id=1113345935]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="TitleLabel" type="Label" parent="UI/CompletionOverlay/Center/Card/Margin/Layout"]
+[node name="TitleLabel" type="Label" parent="UI/CompletionOverlay/Center/Card/Margin/Layout" unique_id=1246735607]
 layout_mode = 2
-horizontal_alignment = 1
 theme_override_font_sizes/font_size = 30
 text = "Nivel completado"
-
-[node name="MedalLabel" type="Label" parent="UI/CompletionOverlay/Center/Card/Margin/Layout"]
-layout_mode = 2
 horizontal_alignment = 1
+
+[node name="MedalLabel" type="Label" parent="UI/CompletionOverlay/Center/Card/Margin/Layout" unique_id=441528631]
+layout_mode = 2
 theme_override_font_sizes/font_size = 42
 text = "Oro"
-
-[node name="StatsLabel" type="Label" parent="UI/CompletionOverlay/Center/Card/Margin/Layout"]
-layout_mode = 2
 horizontal_alignment = 1
-text = "Ticks: 0 | Maquinas: 0"
 
-[node name="Buttons" type="HBoxContainer" parent="UI/CompletionOverlay/Center/Card/Margin/Layout"]
+[node name="StatsLabel" type="Label" parent="UI/CompletionOverlay/Center/Card/Margin/Layout" unique_id=777061276]
 layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 12
+text = "Ticks: 0 | Maquinas: 0"
+horizontal_alignment = 1
 
-[node name="RetryButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons"]
+[node name="Buttons" type="HBoxContainer" parent="UI/CompletionOverlay/Center/Card/Margin/Layout" unique_id=680076057]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="RetryButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons" unique_id=1751982184]
 custom_minimum_size = Vector2(144, 44)
 layout_mode = 2
 text = "Intentar de nuevo"
 
-[node name="NextLevelButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons"]
+[node name="NextLevelButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons" unique_id=927030424]
 custom_minimum_size = Vector2(144, 44)
 layout_mode = 2
 text = "Siguiente nivel"
 
-[node name="MainMenuButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons"]
+[node name="MainMenuButton" type="Button" parent="UI/CompletionOverlay/Center/Card/Margin/Layout/Buttons" unique_id=981098919]
 custom_minimum_size = Vector2(144, 44)
 layout_mode = 2
 text = "Menu principal"

@@ -7,6 +7,7 @@ signal placement_failed(cell: Vector2i)
 signal rotation_changed(rotation_steps: int)
 signal history_changed(can_undo: bool, can_redo: bool)
 signal layout_changed
+signal route_focus_changed(cell, building, building_data, rotation_steps, is_preview, is_valid)
 
 @export var grid_manager_path: NodePath
 @export var placement_preview_path: NodePath
@@ -52,6 +53,7 @@ func _process(_delta: float) -> void:
 		_stop_drag_placing()
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
+		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
 		return
 
 	_update_preview(get_viewport().get_mouse_position())
@@ -341,6 +343,7 @@ func _update_preview(screen_position: Vector2) -> void:
 	if _grid_manager == null or _placement_preview == null or selected_building_index == -1:
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
+		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
 		return
 
 	var cell := _grid_manager.world_to_grid(_screen_to_world(screen_position))
@@ -348,13 +351,24 @@ func _update_preview(screen_position: Vector2) -> void:
 
 	if not _grid_manager.is_in_bounds(cell):
 		_placement_preview.hide_preview()
+		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
 		return
+
+	var occupant := _grid_manager.get_occupant(cell) as Building
+	if occupant != null:
+		_placement_preview.hide_preview()
+		route_focus_changed.emit(cell, occupant, null, 0, false, true)
+		return
+
+	var building_data := available_building_data[selected_building_index]
+	var can_place := _grid_manager.can_place_piece(cell)
 
 	_placement_preview.show_at(
 		_grid_manager.grid_to_world(cell),
-		_grid_manager.can_place_piece(cell),
+		can_place,
 		rotation_steps * 90.0
 	)
+	route_focus_changed.emit(cell, null, building_data, rotation_steps, true, can_place)
 
 
 func _screen_to_world(screen_position: Vector2) -> Vector2:

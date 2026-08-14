@@ -348,6 +348,13 @@ Riesgos:
 
 Al seleccionar un edificio, mostrar entradas y salidas relevantes.
 
+Estado actual:
+
+- implementada una primera versión de vista de rutas por hover y preview;
+- falta selección persistente de edificios colocados;
+- falta integrar motivos detallados de bloqueo en la propia vista;
+- falta pulir la presentación visual tras probarla en juego.
+
 Ideas:
 
 - flecha de salida;

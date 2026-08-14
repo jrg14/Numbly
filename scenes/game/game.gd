@@ -5,6 +5,7 @@ extends Node2D
 @onready var grid_manager: GridManager = $GridManager
 @onready var buildings_root: Node2D = $Buildings
 @onready var packet_visualizer: PacketVisualizer = $PacketVisuals
+@onready var route_overlay: RouteOverlay = $RouteOverlay
 @onready var level_controller: LevelController = $LevelController
 @onready var placement_controller: PlacementController = $PlacementController
 @onready var simulation_manager: SimulationManager = $SimulationManager
@@ -63,6 +64,7 @@ func _ready() -> void:
 	placement_controller.placement_failed.connect(_on_placement_failed)
 	placement_controller.history_changed.connect(_on_history_changed)
 	placement_controller.layout_changed.connect(_on_layout_changed)
+	placement_controller.route_focus_changed.connect(_on_route_focus_changed)
 	simulation_manager.simulation_started.connect(_refresh_play_pause_label)
 	simulation_manager.simulation_paused.connect(_refresh_play_pause_label)
 	simulation_manager.simulation_tick_completed.connect(_on_simulation_tick_completed)
@@ -108,6 +110,7 @@ func reset_level() -> void:
 	_level_completed = false
 	_hide_completion_overlay()
 	packet_visualizer.clear_visuals()
+	route_overlay.hide_routes()
 	simulation_manager.reset()
 	placement_controller.clear_history()
 
@@ -209,6 +212,14 @@ func _on_objectives_changed(summary: String) -> void:
 func _on_history_changed(can_undo: bool, can_redo: bool) -> void:
 	undo_button.disabled = not can_undo
 	redo_button.disabled = not can_redo
+
+
+func _on_route_focus_changed(cell: Vector2i, building: Building, building_data: BuildingData, rotation_steps: int, is_preview: bool, is_valid: bool) -> void:
+	if building == null and building_data == null:
+		route_overlay.hide_routes()
+		return
+
+	route_overlay.show_focus(cell, building, building_data, rotation_steps, is_preview, is_valid)
 
 
 func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
