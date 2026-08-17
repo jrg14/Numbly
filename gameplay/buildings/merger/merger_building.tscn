@@ -1,0 +1,24 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/buildings/merger/merger_building.gd" id="1_merger_script"]
+
+[node name="MergerBuilding" type="Node2D"]
+script = ExtResource("1_merger_script")
+max_buffer_size = 8
+release_interval_ticks = 1
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(0.68, 0.54, 0.3, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="JoinTop" type="Polygon2D" parent="."]
+color = Color(0.11, 0.1, 0.08, 1)
+polygon = PackedVector2Array(-18, -15, -11, -21, 5, -5, 0, 0)
+
+[node name="JoinBottom" type="Polygon2D" parent="."]
+color = Color(0.11, 0.1, 0.08, 1)
+polygon = PackedVector2Array(-18, 15, -11, 21, 5, 5, 0, 0)
+
+[node name="Out" type="Polygon2D" parent="."]
+color = Color(0.11, 0.1, 0.08, 1)
+polygon = PackedVector2Array(-2, -5, 18, -5, 18, 5, -2, 5)

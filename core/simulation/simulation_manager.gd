@@ -9,6 +9,7 @@ signal packet_blocked(packet: NumberPacket, from_building: Building, target_cell
 signal output_packet_consumed(packet: NumberPacket, output: OutputBuilding, matched_target: bool)
 signal output_target_reached(output: OutputBuilding, total_accepted: int)
 signal addition_sum_created(addition: AdditionBuilding, input_values: Array[int], result: int)
+signal arithmetic_operation_created(building: Building, input_values: Array[int], result: int, operator_symbol: String)
 signal connection_error(message: String)
 
 @export_range(1, 120, 1) var ticks_per_second: int = 10:
@@ -30,6 +31,7 @@ var _grid_manager: GridManager
 var _connected_buildings: Dictionary = {}
 var _connected_outputs: Dictionary = {}
 var _connected_additions: Dictionary = {}
+var _connected_arithmetic_operators: Dictionary = {}
 
 
 func _ready() -> void:
@@ -87,6 +89,7 @@ func reset_simulation_state() -> void:
 	_connected_buildings.clear()
 	_connected_outputs.clear()
 	_connected_additions.clear()
+	_connected_arithmetic_operators.clear()
 
 	for node in _get_simulated_nodes():
 		if node.has_method("reset_simulation"):
@@ -152,6 +155,14 @@ func _sync_building_connections() -> void:
 				addition.sum_created.connect(sum_callable)
 			_connected_additions[addition] = true
 
+		var arithmetic_operator := node as ArithmeticOperatorBuilding
+		if arithmetic_operator != null and not _connected_arithmetic_operators.has(arithmetic_operator):
+			if not (arithmetic_operator is AdditionBuilding):
+				var operation_callable := Callable(self, "_on_arithmetic_operation_created")
+				if not arithmetic_operator.operation_created.is_connected(operation_callable):
+					arithmetic_operator.operation_created.connect(operation_callable)
+			_connected_arithmetic_operators[arithmetic_operator] = true
+
 
 func _on_building_packet_output(packet: NumberPacket, from_building: Building) -> void:
 	if _grid_manager == null or packet == null or from_building == null:
@@ -162,7 +173,10 @@ func _on_building_packet_output(packet: NumberPacket, from_building: Building) -
 			_route_packet_to_direction(packet.duplicate_packet(), from_building, direction, true)
 		return
 
-	_route_packet_to_direction(packet, from_building, from_building.facing, false)
+	var output_directions := from_building.get_output_directions(packet)
+	for i in range(output_directions.size()):
+		var routed_packet := packet if i == output_directions.size() - 1 else packet.duplicate_packet()
+		_route_packet_to_direction(routed_packet, from_building, output_directions[i], false)
 
 
 func _route_packet_to_direction(packet: NumberPacket, from_building: Building, direction: Vector2i, skip_empty: bool) -> void:
@@ -194,3 +208,7 @@ func _on_output_packet_consumed(packet: NumberPacket, matched_target: bool, outp
 
 func _on_addition_sum_created(addition: AdditionBuilding, input_values: Array[int], result: int) -> void:
 	addition_sum_created.emit(addition, input_values, result)
+
+
+func _on_arithmetic_operation_created(building: Building, input_values: Array[int], result: int, operator_symbol: String) -> void:
+	arithmetic_operation_created.emit(building, input_values, result, operator_symbol)

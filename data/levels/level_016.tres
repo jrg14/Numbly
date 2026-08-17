@@ -1,0 +1,104 @@
+[gd_resource type="Resource" script_class="LevelData" format=3]
+
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="Script" path="res://resources/level_data.gd" id="2_level_data"]
+[ext_resource type="Script" path="res://resources/level_building_data.gd" id="3_level_building_data"]
+[ext_resource type="Script" path="res://resources/objective_data.gd" id="4_objective_data"]
+[ext_resource type="Script" path="res://resources/level_medal_data.gd" id="5_level_medal_data"]
+[ext_resource type="Resource" path="res://data/buildings/source_data.tres" id="6_source_data"]
+[ext_resource type="Resource" path="res://data/buildings/output_data.tres" id="7_output_data"]
+[ext_resource type="Resource" path="res://data/buildings/conveyor_data.tres" id="8_conveyor_data"]
+[ext_resource type="Resource" path="res://data/buildings/adder_data.tres" id="9_adder_data"]
+[ext_resource type="Resource" path="res://data/buildings/multiplication_data.tres" id="10_multiplication_data"]
+[ext_resource type="Resource" path="res://data/buildings/subtraction_data.tres" id="11_subtraction_data"]
+[ext_resource type="Resource" path="res://data/buildings/division_data.tres" id="12_division_data"]
+[ext_resource type="Resource" path="res://data/buildings/modulo_data.tres" id="13_modulo_data"]
+[ext_resource type="Resource" path="res://data/buildings/splitter_data.tres" id="14_splitter_data"]
+[ext_resource type="Resource" path="res://data/buildings/buffer_data.tres" id="15_buffer_data"]
+[ext_resource type="Resource" path="res://data/buildings/merger_data.tres" id="16_merger_data"]
+[ext_resource type="Resource" path="res://data/buildings/filter_data.tres" id="17_filter_data"]
+[ext_resource type="Resource" path="res://data/buildings/gate_data.tres" id="18_gate_data"]
+
+[sub_resource type="Resource" id="LevelBuildingData_source_4"]
+script = ExtResource("3_level_building_data")
+building_data = ExtResource("6_source_data")
+cell = Vector2i(0, 2)
+locked = true
+generated_value = 4
+
+[sub_resource type="Resource" id="LevelBuildingData_source_6"]
+script = ExtResource("3_level_building_data")
+building_data = ExtResource("6_source_data")
+cell = Vector2i(0, 5)
+locked = true
+generated_value = 6
+
+[sub_resource type="Resource" id="LevelBuildingData_source_2"]
+script = ExtResource("3_level_building_data")
+building_data = ExtResource("6_source_data")
+cell = Vector2i(0, 8)
+locked = true
+generated_value = 2
+
+[sub_resource type="Resource" id="LevelBuildingData_output_10"]
+script = ExtResource("3_level_building_data")
+building_data = ExtResource("7_output_data")
+cell = Vector2i(11, 5)
+locked = true
+target_value = 10
+
+[sub_resource type="Resource" id="ObjectiveData_target_10"]
+script = ExtResource("4_objective_data")
+target_value = 10
+required_count = 3
+
+[sub_resource type="Resource" id="ObjectiveData_machine_limit"]
+script = ExtResource("4_objective_data")
+objective_type = 2
+is_constraint = true
+max_buildings = 80
+
+[sub_resource type="Resource" id="ObjectiveData_time_limit"]
+script = ExtResource("4_objective_data")
+objective_type = 3
+is_constraint = true
+max_ticks = 900
+
+[sub_resource type="Resource" id="ObjectiveData_budget_limit"]
+script = ExtResource("4_objective_data")
+objective_type = 4
+is_constraint = true
+max_budget = 140
+
+[sub_resource type="Resource" id="MedalBronze"]
+script = ExtResource("5_level_medal_data")
+max_ticks = 900
+max_buildings = 80
+description = "Bronce: completa usando el sandbox de piezas."
+
+[sub_resource type="Resource" id="MedalSilver"]
+script = ExtResource("5_level_medal_data")
+medal = 2
+max_ticks = 650
+max_buildings = 50
+description = "Plata: completa con 650 ticks o menos y 50 maquinas o menos."
+
+[sub_resource type="Resource" id="MedalGold"]
+script = ExtResource("5_level_medal_data")
+medal = 3
+max_ticks = 420
+max_buildings = 30
+description = "Oro: completa con 420 ticks o menos y 30 maquinas o menos."
+
+[resource]
+script = ExtResource("2_level_data")
+id = &"level_016"
+display_name = "Sandbox de piezas"
+objective_text = "Prueba todas las piezas y produce tres paquetes de valor 10."
+grid_size = Vector2i(12, 10)
+initial_buildings = Array[ExtResource("3_level_building_data")]([SubResource("LevelBuildingData_source_4"), SubResource("LevelBuildingData_source_6"), SubResource("LevelBuildingData_source_2"), SubResource("LevelBuildingData_output_10")])
+allowed_buildings = Array[ExtResource("1_building_data")]([ExtResource("8_conveyor_data"), ExtResource("9_adder_data"), ExtResource("10_multiplication_data"), ExtResource("11_subtraction_data"), ExtResource("12_division_data"), ExtResource("13_modulo_data"), ExtResource("14_splitter_data"), ExtResource("15_buffer_data"), ExtResource("16_merger_data"), ExtResource("17_filter_data"), ExtResource("18_gate_data")])
+objectives = Array[ExtResource("4_objective_data")]([SubResource("ObjectiveData_target_10"), SubResource("ObjectiveData_machine_limit"), SubResource("ObjectiveData_time_limit"), SubResource("ObjectiveData_budget_limit")])
+max_buildings = 80
+max_ticks = 900
+medal_conditions = Array[ExtResource("5_level_medal_data")]([SubResource("MedalBronze"), SubResource("MedalSilver"), SubResource("MedalGold")])

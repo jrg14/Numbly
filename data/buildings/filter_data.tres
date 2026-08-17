@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/filter/filter_building.tscn" id="2_filter_scene"]
+
+[resource]
+script = ExtResource("1_building_data")
+id = &"filter"
+display_name = "Filter"
+description = "Separa paquetes segun una condicion de valor."
+building_type = 11
+scene = ExtResource("2_filter_scene")
+cost = 4
+input_count = 1
+output_count = 2
+tick_interval = 0.0

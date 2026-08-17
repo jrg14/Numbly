@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/gate/gate_building.tscn" id="2_gate_scene"]
+
+[resource]
+script = ExtResource("1_building_data")
+id = &"gate"
+display_name = "Gate"
+description = "Controla el flujo dejando pasar paquetes segun una regla."
+building_type = 12
+scene = ExtResource("2_gate_scene")
+cost = 4
+input_count = 1
+output_count = 1
+tick_interval = 0.0

@@ -132,7 +132,14 @@ func _get_output_directions() -> Array[Vector2i]:
 			return _all_directions()
 		if _building is OutputBuilding:
 			return _empty_directions()
-		return _single_direction(_building.facing)
+		if _building is SplitterBuilding or _building is FilterBuilding:
+			var dynamic_directions: Array[Vector2i] = []
+			dynamic_directions.append(_building.facing)
+			dynamic_directions.append(_rotate_clockwise(_building.facing))
+			return dynamic_directions
+		if _building is GateBuilding:
+			return _single_direction(_building.facing)
+		return _building.get_output_directions(NumberPacket.new())
 
 	if _building_data == null:
 		return _empty_directions()
@@ -142,6 +149,11 @@ func _get_output_directions() -> Array[Vector2i]:
 			return _all_directions()
 		BuildingData.BuildingType.OUTPUT:
 			return _empty_directions()
+		BuildingData.BuildingType.SPLITTER, BuildingData.BuildingType.FILTER:
+			var directions: Array[Vector2i] = []
+			directions.append(_get_facing_from_rotation(_rotation_steps))
+			directions.append(_rotate_clockwise(_get_facing_from_rotation(_rotation_steps)))
+			return directions
 		_:
 			return _single_direction(_get_facing_from_rotation(_rotation_steps))
 
@@ -152,10 +164,17 @@ func _get_input_directions() -> Array[Vector2i]:
 			return _empty_directions()
 		if _building is ConveyorBuilding:
 			return _single_direction((_building as ConveyorBuilding).input_direction)
-		if _building is AdditionBuilding:
+		if _building is ArithmeticOperatorBuilding:
 			return _get_operator_input_directions(_building.facing)
 		if _building is OutputBuilding:
 			return _all_directions()
+		if _building is SplitterBuilding or _building is FilterBuilding:
+			var routed_input_directions: Array[Vector2i] = []
+			routed_input_directions.append(-_building.facing)
+			routed_input_directions.append(-_rotate_clockwise(_building.facing))
+			return routed_input_directions
+		if _building is BufferBuilding or _building is GateBuilding:
+			return _get_operator_input_directions(_building.facing)
 		return _get_operator_input_directions(_building.facing)
 
 	if _building_data == null:
@@ -169,6 +188,13 @@ func _get_input_directions() -> Array[Vector2i]:
 			return _single_direction(-facing)
 		BuildingData.BuildingType.OUTPUT:
 			return _all_directions()
+		BuildingData.BuildingType.SPLITTER, BuildingData.BuildingType.FILTER:
+			var routed_input_directions: Array[Vector2i] = []
+			routed_input_directions.append(-facing)
+			routed_input_directions.append(-_rotate_clockwise(facing))
+			return routed_input_directions
+		BuildingData.BuildingType.BUFFER, BuildingData.BuildingType.MERGER, BuildingData.BuildingType.GATE:
+			return _get_operator_input_directions(facing)
 		_:
 			return _get_operator_input_directions(facing)
 
@@ -225,11 +251,17 @@ func _can_focused_building_feed(target: Building, direction_to_target: Vector2i)
 	if target is SourceBuilding:
 		return false
 
-	if target is OutputBuilding or target is AdditionBuilding:
+	if target is OutputBuilding or target is ArithmeticOperatorBuilding:
 		return true
 
 	if target is ConveyorBuilding:
 		return (target as ConveyorBuilding).facing != -direction_to_target
+
+	if target is SplitterBuilding or target is FilterBuilding:
+		return not _get_route_output_directions(target).has(-direction_to_target)
+
+	if target is BufferBuilding or target is GateBuilding:
+		return -direction_to_target != target.facing
 
 	return target.can_accept_packet(NumberPacket.new())
 
@@ -241,7 +273,7 @@ func _can_neighbor_feed_focus(neighbor: Building, direction_to_neighbor: Vector2
 	if neighbor is OutputBuilding:
 		return false
 
-	return neighbor.facing == -direction_to_neighbor
+	return _get_route_output_directions(neighbor).has(-direction_to_neighbor)
 
 
 func _get_building_at(cell: Vector2i) -> Building:
@@ -261,3 +293,20 @@ func _get_facing_from_rotation(rotation_steps: int) -> Vector2i:
 			return Vector2i.LEFT
 		_:
 			return Vector2i.UP
+
+
+func _rotate_clockwise(direction: Vector2i) -> Vector2i:
+	return Vector2i(-direction.y, direction.x)
+
+
+func _get_route_output_directions(building: Building) -> Array[Vector2i]:
+	if building is SplitterBuilding or building is FilterBuilding:
+		var directions: Array[Vector2i] = []
+		directions.append(building.facing)
+		directions.append(_rotate_clockwise(building.facing))
+		return directions
+
+	if building is GateBuilding:
+		return _single_direction(building.facing)
+
+	return building.get_output_directions(NumberPacket.new())

@@ -20,12 +20,21 @@ En cada nivel hay:
 
 El jugador construye una pequeña red para mover paquetes numéricos desde las fuentes, transformarlos con operadores y entregarlos en un output con el valor solicitado.
 
-En el contenido actual, los edificios colocables son principalmente:
+En el contenido actual, los edificios colocables disponibles por datos son:
 
 - `Conveyor`;
-- `Addition`.
+- `Addition`;
+- `Multiplication`;
+- `Subtraction`;
+- `Division`;
+- `Modulo`;
+- `Splitter`;
+- `Buffer`;
+- `Merger`;
+- `Filter`;
+- `Gate`.
 
-Aunque el GDD menciona multiplicadores, splitters y otras herramientas futuras, el juego implementado actualmente se centra en transportar números y sumarlos.
+Los primeros 15 niveles siguen centrados en transportar números y sumarlos. `level_016.tres` funciona como sandbox de piezas y expone todo el set para probarlo desde el selector.
 
 ## Flujo de una partida
 
@@ -234,6 +243,54 @@ El sumador:
 
 Por defecto `input_count` es `2`, así que un `Addition` combina dos flujos. Para sumar tres o más fuentes, los niveles actuales encadenan varios `Addition`.
 
+### Operadores aritmeticos
+
+Scripts:
+
+- `gameplay/buildings/multiplication/multiplication_building.gd`;
+- `gameplay/buildings/subtraction/subtraction_building.gd`;
+- `gameplay/buildings/division/division_building.gd`;
+- `gameplay/buildings/modulo/modulo_building.gd`.
+
+Estos operadores comparten la base `ArithmeticOperatorBuilding`.
+
+Comportamiento comun:
+
+- aceptan varias entradas hasta `input_count`;
+- guardan paquetes por carril de entrada;
+- cuando hay un paquete por entrada requerida, consumen uno de cada carril;
+- emiten el resultado hacia `facing`;
+- respetan `max_buffer_size` y `operation_interval_ticks`.
+
+La resta, division y modulo usan el orden de llegada de carriles como orden de operacion. `Division` y `Modulo` rechazan divisores `0`.
+
+### Splitter
+
+Script: `gameplay/buildings/splitter/splitter_building.gd`
+
+El splitter acepta paquetes y los reparte entre dos salidas: `facing` y la direccion perpendicular horaria. Por defecto alterna entre ambas. Tambien soporta modos exportados de duplicacion y prioridad.
+
+### Buffer y Merger
+
+Scripts:
+
+- `gameplay/buildings/buffer/buffer_building.gd`;
+- `gameplay/buildings/merger/merger_building.gd`.
+
+`Buffer` almacena paquetes hasta `max_buffer_size` y libera uno cada `release_interval_ticks`. `Merger` reutiliza esa logica para combinar varias lineas en una salida comun.
+
+### Filter
+
+Script: `gameplay/buildings/filter/filter_building.gd`
+
+El filtro acepta paquetes y decide su salida segun `filter_mode` y `compare_value`. Los paquetes que cumplen salen hacia `facing`; los que no cumplen salen por la direccion perpendicular horaria si `route_failed_packets` esta activo.
+
+### Gate
+
+Script: `gameplay/buildings/gate/gate_building.gd`
+
+La puerta controla el flujo. Puede dejar pasar cada N paquetes, dejar pasar solo un valor concreto, o bloquear un valor concreto. Los paquetes que no pasan se consumen sin emitir salida.
+
 ### Output
 
 Script: `gameplay/buildings/output/output_building.gd`
@@ -423,7 +480,7 @@ Si se repite un nivel, el guardado solo mejora si:
 
 Hay 15 niveles definidos en `data/levels/`.
 
-El contenido actual introduce:
+Los primeros 15 niveles introducen:
 
 - sumas de dos fuentes;
 - múltiples paquetes requeridos;
@@ -431,6 +488,20 @@ El contenido actual introduce:
 - objetivos de throughput en niveles avanzados;
 - límites de máquinas, tiempo y presupuesto;
 - medallas con umbrales progresivamente más estrictos.
+
+El nivel 16 es un sandbox que permite probar todas las piezas implementadas:
+
+- `Conveyor`;
+- `Addition`;
+- `Multiplication`;
+- `Subtraction`;
+- `Division`;
+- `Modulo`;
+- `Splitter`;
+- `Buffer`;
+- `Merger`;
+- `Filter`;
+- `Gate`.
 
 Valores objetivo actuales incluyen, entre otros:
 

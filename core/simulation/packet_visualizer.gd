@@ -60,6 +60,25 @@ func show_addition(addition: AdditionBuilding, input_values: Array[int], result:
 	tween.tween_callback(Callable(label, "queue_free"))
 
 
+func show_operation(building: Building, input_values: Array[int], result: int, operator_symbol: String) -> void:
+	if building == null:
+		return
+
+	var parts: Array[String] = []
+	for value in input_values:
+		parts.append(str(value))
+
+	var expression := "%s = %d" % [(" %s " % operator_symbol).join(parts), result]
+	var label := _create_number_label(expression, Color(0.72, 0.9, 1.0, 1.0), 24)
+	label.custom_minimum_size = Vector2(120, 34)
+	_set_label_center(label, building.global_position + Vector2(0, -42))
+
+	var tween := create_tween()
+	tween.tween_property(label, "position", label.position + Vector2(0, -20), popup_duration)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, popup_duration)
+	tween.tween_callback(Callable(label, "queue_free"))
+
+
 func show_output_received(packet: NumberPacket, output: OutputBuilding, matched_target: bool) -> void:
 	if packet == null or output == null:
 		return

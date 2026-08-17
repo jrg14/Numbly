@@ -4,6 +4,8 @@ Este documento recoge mejoras jugables pendientes para `Numbly`.
 
 No describe comportamiento implementado. Para el estado actual del juego, ver [`current-gameplay.md`](current-gameplay.md). Para la visión general de diseño, ver [`gdd.md`](gdd.md).
 
+Nota de estado: las piezas base `Multiplication`, `Subtraction`, `Division`, `Modulo`, `Splitter`, `Buffer`, `Merger`, `Filter` y `Gate` ya tienen una primera implementación jugable y recursos de datos. Lo pendiente alrededor de ellas es sobre todo balance, UI de configuración, tutorialización, niveles dedicados y pulido visual.
+
 ## Criterio de priorización
 
 Las mejoras se ordenan pensando en:

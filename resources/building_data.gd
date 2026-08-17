@@ -7,6 +7,14 @@ enum BuildingType {
 	OUTPUT,
 	ADDITION,
 	MULTIPLICATION,
+	SUBTRACTION,
+	DIVISION,
+	MODULO,
+	SPLITTER,
+	BUFFER,
+	MERGER,
+	FILTER,
+	GATE,
 }
 
 @export var id: StringName

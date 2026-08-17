@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/buildings/splitter/splitter_building.gd" id="1_splitter_script"]
+
+[node name="SplitterBuilding" type="Node2D"]
+script = ExtResource("1_splitter_script")
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(0.22, 0.66, 0.86, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="Stem" type="Polygon2D" parent="."]
+color = Color(0.07, 0.11, 0.14, 1)
+polygon = PackedVector2Array(-18, -5, 4, -5, 4, 5, -18, 5)
+
+[node name="BranchUp" type="Polygon2D" parent="."]
+color = Color(0.07, 0.11, 0.14, 1)
+polygon = PackedVector2Array(0, -5, 16, -18, 21, -12, 7, 0)
+
+[node name="BranchDown" type="Polygon2D" parent="."]
+color = Color(0.07, 0.11, 0.14, 1)
+polygon = PackedVector2Array(0, 5, 16, 18, 21, 12, 7, 0)

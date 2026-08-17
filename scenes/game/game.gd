@@ -29,6 +29,7 @@ extends Node2D
 
 var build_buttons: Array[Button] = []
 var _level_completed: bool = false
+var _build_palette: GridContainer
 
 
 func _ready() -> void:
@@ -41,6 +42,7 @@ func _ready() -> void:
 		$UI/Controls/BuildButton4,
 		$UI/Controls/BuildButton5,
 	]
+	_create_build_palette()
 
 	play_pause_button.pressed.connect(_on_play_pause_pressed)
 	menu_button.pressed.connect(Callable(SceneRouter, "go_to_main_menu"))
@@ -73,6 +75,7 @@ func _ready() -> void:
 	simulation_manager.output_packet_consumed.connect(_on_output_packet_consumed)
 	simulation_manager.connection_error.connect(_on_connection_error)
 	simulation_manager.addition_sum_created.connect(_on_addition_sum_created)
+	simulation_manager.arithmetic_operation_created.connect(_on_arithmetic_operation_created)
 
 	reset_level()
 	_refresh_play_pause_label()
@@ -145,6 +148,10 @@ func _on_output_packet_consumed(packet: NumberPacket, _output: OutputBuilding, m
 
 func _on_addition_sum_created(addition: AdditionBuilding, input_values: Array[int], result: int) -> void:
 	packet_visualizer.show_addition(addition, input_values, result)
+
+
+func _on_arithmetic_operation_created(building: Building, input_values: Array[int], result: int, operator_symbol: String) -> void:
+	packet_visualizer.show_operation(building, input_values, result, operator_symbol)
 
 
 func _on_level_completed(result: LevelResult) -> void:
@@ -223,6 +230,8 @@ func _on_route_focus_changed(cell: Vector2i, building: Building, building_data: 
 
 
 func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
+	_ensure_build_button_count(available_buildings.size())
+
 	for i in range(build_buttons.size()):
 		var button := build_buttons[i]
 		var has_building := i < available_buildings.size() and available_buildings[i] != null
@@ -230,7 +239,35 @@ func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
 		button.disabled = not has_building
 
 		if has_building:
-			button.text = available_buildings[i].display_name
+			button.text = "%d %s" % [i + 1, available_buildings[i].display_name]
+
+
+func _ensure_build_button_count(count: int) -> void:
+	while build_buttons.size() < count:
+		var button := Button.new()
+		button.name = "BuildButton%d" % (build_buttons.size() + 1)
+		button.custom_minimum_size = Vector2(124, 36)
+		button.layout_mode = 2
+		_build_palette.add_child(button)
+		button.pressed.connect(_on_build_button_pressed.bind(build_buttons.size()))
+		build_buttons.append(button)
+
+
+func _create_build_palette() -> void:
+	_build_palette = GridContainer.new()
+	_build_palette.name = "BuildPalette"
+	_build_palette.columns = 6
+	_build_palette.offset_left = 16.0
+	_build_palette.offset_top = 96.0
+	_build_palette.offset_right = 820.0
+	_build_palette.offset_bottom = 180.0
+	_build_palette.add_theme_constant_override("h_separation", 8)
+	_build_palette.add_theme_constant_override("v_separation", 8)
+	$UI.add_child(_build_palette)
+
+	for button in build_buttons:
+		button.custom_minimum_size = Vector2(124, 36)
+		button.reparent(_build_palette)
 
 
 func _refresh_medal_progress() -> void:

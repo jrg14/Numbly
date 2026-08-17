@@ -250,17 +250,15 @@ func can_redo() -> bool:
 
 
 func _handle_key_input(event: InputEventKey) -> void:
+	if event.keycode >= KEY_1 and event.keycode <= KEY_9:
+		select_building_index(event.keycode - KEY_1)
+		return
+
+	if event.keycode == KEY_0:
+		select_building_index(9)
+		return
+
 	match event.keycode:
-		KEY_1:
-			select_building_index(0)
-		KEY_2:
-			select_building_index(1)
-		KEY_3:
-			select_building_index(2)
-		KEY_4:
-			select_building_index(3)
-		KEY_5:
-			select_building_index(4)
 		KEY_R:
 			rotate_clockwise()
 		KEY_Z:
@@ -607,10 +605,13 @@ func _neighbor_can_feed_conveyor(neighbor: Building, direction_to_neighbor: Vect
 	if neighbor is SourceBuilding:
 		return true
 
+	if neighbor is OutputBuilding:
+		return false
+
 	if neighbor is ConveyorBuilding:
 		return neighbor.facing == -direction_to_neighbor
 
-	return false
+	return _get_route_output_directions(neighbor).has(-direction_to_neighbor)
 
 
 func _conveyor_can_feed_neighbor(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:
@@ -620,13 +621,35 @@ func _conveyor_can_feed_neighbor(neighbor: Building, direction_to_neighbor: Vect
 	if neighbor is OutputBuilding:
 		return true
 
-	if neighbor is AdditionBuilding:
+	if neighbor is ArithmeticOperatorBuilding:
 		return true
 
 	if neighbor is ConveyorBuilding:
 		return (neighbor as ConveyorBuilding).facing != -direction_to_neighbor
 
+	if neighbor is SplitterBuilding or neighbor is FilterBuilding:
+		var output_directions := _get_route_output_directions(neighbor)
+		return not output_directions.has(-direction_to_neighbor)
+
+	if neighbor is BufferBuilding or neighbor is GateBuilding:
+		return -direction_to_neighbor != neighbor.facing
+
 	return neighbor.can_accept_packet(NumberPacket.new())
+
+
+func _get_route_output_directions(building: Building) -> Array[Vector2i]:
+	if building is SplitterBuilding or building is FilterBuilding:
+		var directions: Array[Vector2i] = []
+		directions.append(building.facing)
+		directions.append(Vector2i(-building.facing.y, building.facing.x))
+		return directions
+
+	if building is GateBuilding:
+		var directions: Array[Vector2i] = []
+		directions.append(building.facing)
+		return directions
+
+	return building.get_output_directions(NumberPacket.new())
 
 
 func _get_building_at(cell: Vector2i) -> Building:

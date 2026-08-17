@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/splitter/splitter_building.tscn" id="2_splitter_scene"]
+
+[resource]
+script = ExtResource("1_building_data")
+id = &"splitter"
+display_name = "Splitter"
+description = "Reparte paquetes entre dos salidas."
+building_type = 8
+scene = ExtResource("2_splitter_scene")
+cost = 3
+input_count = 1
+output_count = 2
+tick_interval = 0.0

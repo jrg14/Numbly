@@ -61,6 +61,12 @@ func emit_packet(packet: NumberPacket) -> void:
 	packet_output.emit(packet, self)
 
 
+func get_output_directions(_packet: NumberPacket = null) -> Array[Vector2i]:
+	var directions: Array[Vector2i] = []
+	directions.append(facing)
+	return directions
+
+
 func _on_packet_accepted(_packet: NumberPacket) -> void:
 	pass
 

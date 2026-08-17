@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/multiplication/multiplication_building.tscn" id="2_multiplication_scene"]
+
+[resource]
+script = ExtResource("1_building_data")
+id = &"multiplication"
+display_name = "Multiplication"
+description = "Consume dos paquetes numericos y emite el producto."
+building_type = 4
+scene = ExtResource("2_multiplication_scene")
+cost = 5
+input_count = 2
+output_count = 1
+tick_interval = 0.0

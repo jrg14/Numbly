@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/building_data.gd" id="1_building_data"]
+[ext_resource type="PackedScene" path="res://gameplay/buildings/modulo/modulo_building.tscn" id="2_modulo_scene"]
+
+[resource]
+script = ExtResource("1_building_data")
+id = &"modulo"
+display_name = "Modulo"
+description = "Emite el resto de dividir entradas en orden de llegada."
+building_type = 7
+scene = ExtResource("2_modulo_scene")
+cost = 6
+input_count = 2
+output_count = 1
+tick_interval = 0.0

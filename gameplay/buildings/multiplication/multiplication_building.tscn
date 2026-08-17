@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gameplay/buildings/multiplication/multiplication_building.gd" id="1_multiplication_script"]
+
+[node name="MultiplicationBuilding" type="Node2D"]
+script = ExtResource("1_multiplication_script")
+input_count = 2
+max_buffer_size = 8
+operation_interval_ticks = 10
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(0.45, 0.48, 0.86, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
+
+[node name="SymbolLabel" type="Label" parent="."]
+offset_left = -11.0
+offset_top = -17.0
+offset_right = 19.0
+offset_bottom = 15.0
+text = "x"
+horizontal_alignment = 1
+vertical_alignment = 1
