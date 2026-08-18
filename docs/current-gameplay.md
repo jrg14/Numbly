@@ -93,10 +93,12 @@ La construcción está controlada por `gameplay/placement/placement_controller.g
 El jugador puede:
 
 - seleccionar edificios con los botones de UI;
-- usar teclas `1` a `5` para seleccionar edificios;
+- seleccionar edificios desde una paleta inferior adaptada a pantallas táctiles;
+- usar teclas `1` a `9` y `0` para seleccionar edificios;
 - pulsar `R` para rotar;
 - colocar con click izquierdo o touch;
 - arrastrar para colocar conveyors en cadena;
+- activar `Borrar` y tocar/arrastrar sobre piezas colocadas para eliminarlas en pantallas táctiles;
 - borrar con click derecho si está habilitado;
 - borrar con `Delete` o `Backspace`;
 - deshacer con `Ctrl+Z`;
@@ -119,6 +121,18 @@ Cuando `Game` recibe `layout_changed`:
 1. recalcula métricas de layout;
 1. refresca el progreso de medallas;
 1. muestra un mensaje de estado.
+
+## Android y pantallas táctiles
+
+El proyecto está configurado para una experiencia landscape en Android:
+
+- viewport base `1280x720`;
+- orientación `SCREEN_SENSOR_LANDSCAPE`;
+- entrada táctil directa para colocar, arrastrar y borrar;
+- tablero centrado y escalado según el tamaño del nivel y del viewport;
+- controles principales en la parte superior;
+- paleta de construcción inferior con botones grandes;
+- botón táctil `Borrar` para eliminar piezas sin depender de clic derecho o teclado.
 
 ## Grid
 
@@ -450,7 +464,7 @@ También existe `StarConditionData`, pero cuando hay `medal_conditions`, el fluj
 
 ## Guardado y selección de niveles
 
-`GameState` guarda la ruta del nivel seleccionado y permite avanzar al siguiente nivel ordenando los `.tres` de `data/levels/`.
+`GameState` guarda la ruta del nivel seleccionado y permite avanzar al siguiente nivel usando una lista explícita de rutas de nivel. Esta lista evita depender de listar directorios `res://` en Android.
 
 `SaveManager` guarda progreso en:
 

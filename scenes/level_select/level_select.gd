@@ -1,7 +1,5 @@
 extends Control
 
-const LEVELS_DIR := "res://data/levels"
-
 @onready var levels_list: VBoxContainer = $Margin/Layout/Scroll/LevelsList
 @onready var back_button: Button = $Margin/Layout/Header/BackButton
 @onready var status_label: Label = $Margin/Layout/StatusLabel
@@ -13,7 +11,7 @@ func _ready() -> void:
 
 
 func _populate_levels() -> void:
-	var level_paths := _get_level_paths()
+	var level_paths := GameState.get_level_paths()
 
 	if level_paths.is_empty():
 		status_label.text = "No hay niveles disponibles."
@@ -37,26 +35,6 @@ func _populate_levels() -> void:
 		button.tooltip_text = "%s\n%s" % [level_data.objective_text, SaveManager.get_level_summary(level_data.id)]
 		button.pressed.connect(_on_level_pressed.bind(level_path))
 		levels_list.add_child(button)
-
-
-func _get_level_paths() -> Array[String]:
-	var level_paths: Array[String] = []
-	var directory := DirAccess.open(LEVELS_DIR)
-	if directory == null:
-		return level_paths
-
-	directory.list_dir_begin()
-	var file_name := directory.get_next()
-
-	while not file_name.is_empty():
-		if not directory.current_is_dir() and file_name.ends_with(".tres"):
-			level_paths.append("%s/%s" % [LEVELS_DIR, file_name])
-
-		file_name = directory.get_next()
-
-	directory.list_dir_end()
-	level_paths.sort()
-	return level_paths
 
 
 func _on_level_pressed(level_path: String) -> void:

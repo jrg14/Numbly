@@ -5,6 +5,7 @@ signal selected_building_changed(index: int, scene: PackedScene)
 signal placement_succeeded(piece: Node2D, cell: Vector2i)
 signal placement_failed(cell: Vector2i)
 signal rotation_changed(rotation_steps: int)
+signal erase_mode_changed(enabled: bool)
 signal history_changed(can_undo: bool, can_redo: bool)
 signal layout_changed
 signal route_focus_changed(cell, building, building_data, rotation_steps, is_preview, is_valid)
@@ -21,12 +22,14 @@ signal route_focus_changed(cell, building, building_data, rotation_steps, is_pre
 
 var selected_building_index: int = -1
 var rotation_steps: int = 0
+var erase_mode: bool = false
 
 var _grid_manager: GridManager
 var _placement_preview: PlacementPreview
 var _build_parent: Node
 var _last_hovered_cell: Vector2i = Vector2i(-9999, -9999)
 var _is_drag_placing: bool = false
+var _is_drag_removing: bool = false
 var _last_drag_cell: Vector2i = Vector2i(-9999, -9999)
 var _drag_placed_cells: Dictionary = {}
 var _undo_stack: Array[BuildCommand] = []
@@ -51,6 +54,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not input_enabled:
 		_stop_drag_placing()
+		_stop_drag_removing()
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
 		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
@@ -96,6 +100,7 @@ func select_building_index(index: int) -> void:
 		rotation_changed.emit(rotation_steps)
 
 	selected_building_index = index
+	set_erase_mode(false)
 	selected_building_changed.emit(index, available_building_data[index].scene)
 	_stop_drag_placing()
 	_update_preview(get_viewport().get_mouse_position())
@@ -199,6 +204,28 @@ func remove_piece_at(cell: Vector2i) -> Node2D:
 	return null
 
 
+func set_erase_mode(enabled: bool) -> void:
+	if erase_mode == enabled:
+		return
+
+	erase_mode = enabled
+	_stop_drag_placing()
+	_stop_drag_removing()
+	erase_mode_changed.emit(erase_mode)
+
+	if _placement_preview != null:
+		_placement_preview.hide_preview()
+
+	if erase_mode:
+		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
+	else:
+		_update_preview(get_viewport().get_mouse_position())
+
+
+func toggle_erase_mode() -> void:
+	set_erase_mode(not erase_mode)
+
+
 func undo() -> bool:
 	if _undo_stack.is_empty():
 		return false
@@ -282,6 +309,7 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 func _handle_mouse_release(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		_stop_drag_placing()
+		_stop_drag_removing()
 
 
 func _handle_touch(event: InputEventScreenTouch) -> void:
@@ -289,9 +317,14 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		_begin_or_place_at_screen_position(event.position)
 	else:
 		_stop_drag_placing()
+		_stop_drag_removing()
 
 
 func _handle_pointer_drag(screen_position: Vector2) -> void:
+	if _is_drag_removing:
+		_try_remove_at_screen_position(screen_position)
+		return
+
 	if not _is_drag_placing:
 		return
 
@@ -299,6 +332,11 @@ func _handle_pointer_drag(screen_position: Vector2) -> void:
 
 
 func _begin_or_place_at_screen_position(screen_position: Vector2) -> void:
+	if erase_mode:
+		_start_drag_removing()
+		_try_remove_at_screen_position(screen_position)
+		return
+
 	if _can_drag_place_selected_building():
 		_start_drag_placing()
 		_drag_place_at_screen_position(screen_position)
@@ -338,7 +376,7 @@ func _try_remove_at_screen_position(screen_position: Vector2) -> void:
 
 
 func _update_preview(screen_position: Vector2) -> void:
-	if _grid_manager == null or _placement_preview == null or selected_building_index == -1:
+	if erase_mode or _grid_manager == null or _placement_preview == null or selected_building_index == -1:
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
 		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
@@ -387,6 +425,14 @@ func _stop_drag_placing() -> void:
 
 	if was_drag_placing:
 		_update_all_conveyor_routes()
+
+
+func _start_drag_removing() -> void:
+	_is_drag_removing = true
+
+
+func _stop_drag_removing() -> void:
+	_is_drag_removing = false
 
 
 func _can_drag_place_selected_building() -> bool:

@@ -1,7 +1,33 @@
 extends Node
 
 const DEFAULT_LEVEL_PATH := "res://data/levels/level_001.tres"
-const LEVELS_DIR := "res://data/levels"
+const LEVEL_PATHS: Array[String] = [
+	"res://data/levels/level_001.tres",
+	"res://data/levels/level_002.tres",
+	"res://data/levels/level_003.tres",
+	"res://data/levels/level_004.tres",
+	"res://data/levels/level_005.tres",
+	"res://data/levels/level_006.tres",
+	"res://data/levels/level_007.tres",
+	"res://data/levels/level_008.tres",
+	"res://data/levels/level_009.tres",
+	"res://data/levels/level_010.tres",
+	"res://data/levels/level_011.tres",
+	"res://data/levels/level_012.tres",
+	"res://data/levels/level_013.tres",
+	"res://data/levels/level_014.tres",
+	"res://data/levels/level_015.tres",
+	"res://data/levels/level_016.tres",
+	"res://data/levels/level_017.tres",
+	"res://data/levels/level_018.tres",
+	"res://data/levels/level_019.tres",
+	"res://data/levels/level_020.tres",
+	"res://data/levels/level_021.tres",
+	"res://data/levels/level_022.tres",
+	"res://data/levels/level_023.tres",
+	"res://data/levels/level_024.tres",
+	"res://data/levels/level_025.tres",
+]
 
 var selected_level_path: String = DEFAULT_LEVEL_PATH
 
@@ -31,30 +57,14 @@ func select_next_level() -> bool:
 	return true
 
 
+func get_level_paths() -> Array[String]:
+	return LEVEL_PATHS.duplicate()
+
+
 func _get_next_level_path() -> String:
-	var level_paths: Array[String] = _get_level_paths()
+	var level_paths: Array[String] = get_level_paths()
 	var current_index: int = level_paths.find(selected_level_path)
 	if current_index == -1 or current_index >= level_paths.size() - 1:
 		return ""
 
 	return level_paths[current_index + 1]
-
-
-func _get_level_paths() -> Array[String]:
-	var level_paths: Array[String] = []
-	var directory: DirAccess = DirAccess.open(LEVELS_DIR)
-	if directory == null:
-		return level_paths
-
-	directory.list_dir_begin()
-	var file_name: String = directory.get_next()
-
-	while not file_name.is_empty():
-		if not directory.current_is_dir() and file_name.ends_with(".tres"):
-			level_paths.append("%s/%s" % [LEVELS_DIR, file_name])
-
-		file_name = directory.get_next()
-
-	directory.list_dir_end()
-	level_paths.sort()
-	return level_paths
