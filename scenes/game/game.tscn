@@ -118,15 +118,15 @@ layout_mode = 2
 text = "Rotate"
 
 [node name="SelectedLabel" type="Label" parent="UI/Controls" unique_id=229760538]
+visible = false
 custom_minimum_size = Vector2(144, 40)
 layout_mode = 2
-text = "Selected: Source"
 vertical_alignment = 1
 
 [node name="TickLabel" type="Label" parent="UI/Controls" unique_id=1087121898]
+visible = false
 custom_minimum_size = Vector2(88, 40)
 layout_mode = 2
-text = "Tick: 0"
 vertical_alignment = 1
 
 [node name="ObjectiveLabel" type="Label" parent="UI" unique_id=609476794]
@@ -135,15 +135,14 @@ offset_left = 16.0
 offset_top = 64.0
 offset_right = 520.0
 offset_bottom = 88.0
-text = "Objective: produce 5 from sources 2 and 3"
 
 [node name="MedalProgressLabel" type="Label" parent="UI" unique_id=224064499]
+visible = false
 offset_left = 16.0
 offset_top = 64.0
 offset_right = 760.0
 offset_bottom = 88.0
 theme_override_font_sizes/font_size = 18
-text = "Aspirando a Oro | Maquinas 0/10 | Tiempo 0.0s/18.0s"
 
 [node name="StatusLabel" type="Label" parent="UI" unique_id=830790399]
 visible = false

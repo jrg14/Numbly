@@ -16,11 +16,8 @@ extends Node2D
 @onready var redo_button: Button = $UI/Controls/RedoButton
 @onready var reset_button: Button = $UI/Controls/ResetButton
 @onready var rotate_button: Button = $UI/Controls/RotateButton
-@onready var tick_label: Label = $UI/Controls/TickLabel
-@onready var selected_label: Label = $UI/Controls/SelectedLabel
 @onready var medal_progress_label: Label = $UI/MedalProgressLabel
 @onready var status_label: Label = $UI/StatusLabel
-@onready var objective_label: Label = $UI/ObjectiveLabel
 @onready var completion_overlay: Control = $UI/CompletionOverlay
 @onready var completion_title_label: Label = $UI/CompletionOverlay/Center/Card/Margin/Layout/TitleLabel
 @onready var completion_medal_label: Label = $UI/CompletionOverlay/Center/Card/Margin/Layout/MedalLabel
@@ -70,8 +67,6 @@ func _ready() -> void:
 	level_controller.level_load_failed.connect(_on_level_load_failed)
 	level_controller.level_completed.connect(_on_level_completed)
 	level_controller.level_failed.connect(_on_level_failed)
-	level_controller.objectives_changed.connect(_on_objectives_changed)
-	placement_controller.selected_building_changed.connect(_on_selected_building_changed)
 	placement_controller.placement_failed.connect(_on_placement_failed)
 	placement_controller.erase_mode_changed.connect(_on_erase_mode_changed)
 	placement_controller.history_changed.connect(_on_history_changed)
@@ -104,22 +99,8 @@ func _refresh_play_pause_label() -> void:
 	play_pause_button.text = "Pause" if simulation_manager.is_running else "Play"
 
 
-func _on_selected_building_changed(index: int, _scene: PackedScene) -> void:
-	if placement_controller.erase_mode:
-		selected_label.text = "Modo: Borrar"
-		return
-
-	var available_buildings := level_controller.get_available_buildings()
-	if index < 0 or index >= available_buildings.size():
-		selected_label.text = "Pieza: ninguna"
-		return
-
-	selected_label.text = "Pieza: %s" % available_buildings[index].display_name
-
-
-func _on_simulation_tick_completed(tick: int, _tick_delta: float) -> void:
-	tick_label.text = "Tick: %d" % tick
-	level_controller.record_tick(tick, _tick_delta, buildings_root)
+func _on_simulation_tick_completed(tick: int, tick_delta: float) -> void:
+	level_controller.record_tick(tick, tick_delta, buildings_root)
 	_refresh_medal_progress()
 
 
@@ -213,7 +194,6 @@ func _on_layout_changed() -> void:
 
 
 func _on_level_loaded(level_data: LevelData) -> void:
-	objective_label.text = level_data.objective_text
 	_fit_board_to_viewport(level_data.grid_size)
 	_refresh_building_positions()
 	placement_controller.max_placed_buildings = level_data.max_buildings
@@ -227,12 +207,7 @@ func _on_level_loaded(level_data: LevelData) -> void:
 
 
 func _on_level_load_failed(message: String) -> void:
-	objective_label.text = "Level load failed"
 	status_label.text = message
-
-
-func _on_objectives_changed(summary: String) -> void:
-	objective_label.text = summary
 
 
 func _on_history_changed(can_undo: bool, can_redo: bool) -> void:
@@ -297,6 +272,7 @@ func _create_build_palette() -> void:
 	_build_palette = HBoxContainer.new()
 	_build_palette.name = "BuildPalette"
 	_build_palette.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_build_palette.alignment = BoxContainer.ALIGNMENT_CENTER
 	_build_palette.add_theme_constant_override("h_separation", 8)
 	scroll.add_child(_build_palette)
 
@@ -326,31 +302,21 @@ func _configure_mobile_hud() -> void:
 	controls.offset_top = top_margin
 	controls.offset_right = viewport_size.x - side_margin
 	controls.offset_bottom = top_margin + control_height
+	controls.alignment = BoxContainer.ALIGNMENT_CENTER
 	controls.add_theme_constant_override("separation", 6)
 
 	for button in [play_pause_button, menu_button, undo_button, redo_button, reset_button, erase_button, rotate_button]:
 		if button != null:
 			button.custom_minimum_size = Vector2(78, control_height)
 
-	selected_label.custom_minimum_size = Vector2(172, control_height)
-	tick_label.custom_minimum_size = Vector2(92, control_height)
-
-	objective_label.visible = true
-	objective_label.offset_left = side_margin
-	objective_label.offset_top = 64.0
-	objective_label.offset_right = viewport_size.x - side_margin
-	objective_label.offset_bottom = 86.0
-
 	medal_progress_label.offset_left = side_margin
-	medal_progress_label.offset_top = 88.0
+	medal_progress_label.offset_top = top_margin + control_height + 6.0
 	medal_progress_label.offset_right = viewport_size.x - side_margin
-	medal_progress_label.offset_bottom = 112.0
+	medal_progress_label.offset_bottom = top_margin + control_height + 30.0
+	medal_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_refresh_medal_progress()
 
-	status_label.visible = true
-	status_label.offset_left = side_margin
-	status_label.offset_top = viewport_size.y - palette_height - 28.0
-	status_label.offset_right = viewport_size.x - side_margin
-	status_label.offset_bottom = viewport_size.y - palette_height - 4.0
+	status_label.visible = false
 
 	if _build_palette_panel != null:
 		_build_palette_panel.offset_left = side_margin
@@ -369,7 +335,7 @@ func _fit_board_to_viewport(level_grid_size: Vector2i) -> void:
 
 	var viewport_size := get_viewport_rect().size
 	var board_top := 118.0
-	var bottom_reserved := 114.0
+	var bottom_reserved := 94.0
 	var side_margin := 16.0
 	var available_width := maxf(viewport_size.x - side_margin * 2.0, 1.0)
 	var available_height := maxf(viewport_size.y - board_top - bottom_reserved, 1.0)
@@ -404,7 +370,7 @@ func _refresh_building_positions() -> void:
 
 
 func _refresh_medal_progress() -> void:
-	var summary: String = level_controller.get_medal_progress_summary(simulation_manager.ticks_per_second)
+	var summary := level_controller.get_medal_progress_summary(simulation_manager.ticks_per_second)
 	medal_progress_label.visible = not summary.is_empty()
 	medal_progress_label.text = summary
 	medal_progress_label.add_theme_color_override(
@@ -456,9 +422,9 @@ func _on_erase_mode_changed(enabled: bool) -> void:
 		erase_button.set_pressed_no_signal(enabled)
 
 	if enabled:
-		selected_label.text = "Modo: Borrar"
+		status_label.text = "Toca o arrastra sobre piezas para borrarlas."
 	else:
-		_on_selected_building_changed(placement_controller.selected_building_index, null)
+		status_label.text = "Coloca edificios y pulsa Play."
 
 
 func _on_viewport_size_changed() -> void:
