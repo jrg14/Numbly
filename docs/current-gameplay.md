@@ -34,7 +34,7 @@ En el contenido actual, los edificios colocables disponibles por datos son:
 - `Filter`;
 - `Gate`.
 
-Los primeros 15 niveles siguen centrados en transportar números y sumarlos. `level_016.tres` funciona como sandbox de piezas y expone todo el set para probarlo desde el selector.
+El contenido actual está organizado en bloques de 5 niveles: suma, multiplicación, resta, división y módulo. Las piezas logísticas y de control ya existen en datos, pero todavía no tienen bloques de niveles dedicados.
 
 ## Flujo de una partida
 
@@ -478,44 +478,38 @@ Si se repite un nivel, el guardado solo mejora si:
 
 ## Estado actual del contenido
 
-Hay 15 niveles definidos en `data/levels/`.
+Hay 25 niveles definidos en `data/levels/`.
 
-Los primeros 15 niveles introducen:
+El contenido actual se organiza así:
 
-- sumas de dos fuentes;
-- múltiples paquetes requeridos;
-- cadenas de sumadores para combinar tres o cuatro fuentes;
-- objetivos de throughput en niveles avanzados;
-- límites de máquinas, tiempo y presupuesto;
-- medallas con umbrales progresivamente más estrictos.
+- `level_001` a `level_005`: suma;
+- `level_006` a `level_010`: multiplicación;
+- `level_011` a `level_015`: resta;
+- `level_016` a `level_020`: división;
+- `level_021` a `level_025`: módulo.
 
-El nivel 16 es un sandbox que permite probar todas las piezas implementadas:
+Cada bloque de operación introduce:
 
+- dos fuentes bloqueadas;
+- un output bloqueado;
 - `Conveyor`;
-- `Addition`;
-- `Multiplication`;
-- `Subtraction`;
-- `Division`;
-- `Modulo`;
-- `Splitter`;
-- `Buffer`;
-- `Merger`;
-- `Filter`;
-- `Gate`.
+- el edificio de operación correspondiente;
+- objetivos de valor;
+- límites de máquinas, tiempo y presupuesto;
+- medallas con umbrales de ticks y máquinas.
 
 Valores objetivo actuales incluyen, entre otros:
 
 - `5`;
 - `8`;
 - `9`;
+- `16`;
+- `20`;
+- `36`;
+- `42`;
 - `12`;
-- `13`;
-- `15`;
-- `17`;
-- `19`;
-- `23`;
 - `24`;
-- `41`.
+- restos como `1`, `4` y `5`.
 
 ## Diferencias con la visión del GDD
 

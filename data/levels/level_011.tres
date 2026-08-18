@@ -1,8 +1,8 @@
-[gd_resource type="Resource" script_class="LevelData" load_steps=26 format=3]
+[gd_resource type="Resource" script_class="LevelData" load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://resources/level_data.gd" id="1_level_data"]
 [ext_resource type="Resource" path="res://data/buildings/source_data.tres" id="2_source_data"]
-[ext_resource type="Resource" path="res://data/buildings/adder_data.tres" id="3_adder_data"]
+[ext_resource type="Resource" path="res://data/buildings/subtraction_data.tres" id="3_operation_data"]
 [ext_resource type="Resource" path="res://data/buildings/output_data.tres" id="4_output_data"]
 [ext_resource type="Resource" path="res://data/buildings/conveyor_data.tres" id="5_conveyor_data"]
 [ext_resource type="Script" path="res://resources/level_building_data.gd" id="6_level_building_data"]
@@ -13,61 +13,48 @@
 [sub_resource type="Resource" id="SourceA"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 1)
+cell = Vector2i(0, 2)
 locked = true
-generated_value = 2
+generated_value = 8
 
 [sub_resource type="Resource" id="SourceB"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 3)
-locked = true
-generated_value = 3
-
-[sub_resource type="Resource" id="SourceC"]
-script = ExtResource("6_level_building_data")
-building_data = ExtResource("2_source_data")
 cell = Vector2i(0, 5)
 locked = true
-generated_value = 5
-
-[sub_resource type="Resource" id="SourceD"]
-script = ExtResource("6_level_building_data")
-building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 7)
-locked = true
-generated_value = 7
+generated_value = 3
 
 [sub_resource type="Resource" id="Output"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("4_output_data")
-cell = Vector2i(11, 4)
+cell = Vector2i(9, 4)
 locked = true
-target_value = 17
+target_value = 5
+required_count = 1
 
 [sub_resource type="Resource" id="Target"]
 script = ExtResource("7_objective_data")
 objective_type = 0
-target_value = 17
+target_value = 5
 required_count = 1
 
 [sub_resource type="Resource" id="MachineLimit"]
 script = ExtResource("7_objective_data")
 objective_type = 2
 is_constraint = true
-max_buildings = 46
+max_buildings = 26
 
 [sub_resource type="Resource" id="TimeLimit"]
 script = ExtResource("7_objective_data")
 objective_type = 3
 is_constraint = true
-max_ticks = 560
+max_ticks = 320
 
 [sub_resource type="Resource" id="BudgetLimit"]
 script = ExtResource("7_objective_data")
 objective_type = 4
 is_constraint = true
-max_budget = 46
+max_budget = 34
 
 [sub_resource type="Resource" id="StarComplete"]
 script = ExtResource("8_star_condition_data")
@@ -79,54 +66,54 @@ description = "Complete the level."
 script = ExtResource("8_star_condition_data")
 stars = 2
 condition_type = 1
-limit = 24
-description = "Use 24 or fewer placed buildings."
+limit = 12
+description = "Use 12 or fewer placed buildings."
 
 [sub_resource type="Resource" id="StarTicks"]
 script = ExtResource("8_star_condition_data")
 stars = 3
 condition_type = 2
-limit = 380
-description = "Complete within 380 simulation ticks."
+limit = 190
+description = "Complete within 190 simulation ticks."
 
 [sub_resource type="Resource" id="StarBudget"]
 script = ExtResource("8_star_condition_data")
 stars = 3
 condition_type = 3
-limit = 36
-description = "Spend 36 or less."
+limit = 16
+description = "Spend 16 or less."
 
 [sub_resource type="Resource" id="MedalBronze"]
 script = ExtResource("9_level_medal_data")
 medal = 1
-max_ticks = 560
-max_buildings = 46
-description = "Bronce: completa con 560 ticks o menos y 46 maquinas o menos."
+max_ticks = 320
+max_buildings = 26
+description = "Bronce: completa con 320 ticks o menos y 26 maquinas o menos."
 
 [sub_resource type="Resource" id="MedalSilver"]
 script = ExtResource("9_level_medal_data")
 medal = 2
-max_ticks = 470
-max_buildings = 35
-description = "Plata: completa con 470 ticks o menos y 35 maquinas o menos."
+max_ticks = 255
+max_buildings = 18
+description = "Plata: completa con 255 ticks o menos y 18 maquinas o menos."
 
 [sub_resource type="Resource" id="MedalGold"]
 script = ExtResource("9_level_medal_data")
 medal = 3
-max_ticks = 380
-max_buildings = 24
-description = "Oro: completa con 380 ticks o menos y 24 maquinas o menos."
+max_ticks = 190
+max_buildings = 12
+description = "Oro: completa con 190 ticks o menos y 12 maquinas o menos."
 
 [resource]
 script = ExtResource("1_level_data")
 id = &"level_011"
-display_name = "Cadena de cuatro"
-objective_text = "Combina 2, 3, 5 y 7 para producir 17."
-grid_size = Vector2i(12, 9)
-initial_buildings = Array[LevelBuildingData]([SubResource("SourceA"), SubResource("SourceB"), SubResource("SourceC"), SubResource("SourceD"), SubResource("Output")])
-allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtResource("3_adder_data")])
+display_name = "Primera resta"
+objective_text = "Haz entrar 8 antes que 3 para producir 5."
+grid_size = Vector2i(10, 8)
+initial_buildings = Array[LevelBuildingData]([SubResource("SourceA"), SubResource("SourceB"), SubResource("Output")])
+allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtResource("3_operation_data")])
 objectives = Array[ObjectiveData]([SubResource("Target"), SubResource("MachineLimit"), SubResource("TimeLimit"), SubResource("BudgetLimit")])
-max_buildings = 46
-max_ticks = 560
+max_buildings = 26
+max_ticks = 320
 medal_conditions = Array[LevelMedalData]([SubResource("MedalBronze"), SubResource("MedalSilver"), SubResource("MedalGold")])
 star_conditions = Array[StarConditionData]([SubResource("StarComplete"), SubResource("StarBuildings"), SubResource("StarTicks"), SubResource("StarBudget")])
