@@ -114,6 +114,8 @@ Reglas de colocación:
 - undo/redo reejecuta o revierte esos comandos;
 - tras cada cambio, se recalculan rutas de conveyors y se emite `layout_changed`.
 
+La vista previa de colocación instancia la escena real del edificio seleccionado. Si el jugador rota antes de colocar, la preview rota igual que la pieza final; ya no se dibuja un rectángulo/flecha auxiliar encima del grid.
+
 Cuando `Game` recibe `layout_changed`:
 
 1. marca el nivel como no completado;
@@ -356,8 +358,10 @@ La lectura principal vive en el sprite del edificio:
 - los operadores aritméticos son amarillos;
 - en orientación base, `B` está en la celda superior izquierda;
 - `A` está en la celda superior derecha;
-- la fórmula inferior (`A+B`, `A-B`, `AxB`, `A/B`, `A%B`) marca la salida combinada;
-- al rotar el edificio, el sprite gira junto con los puertos lógicos.
+- la mitad inferior no tiene divisor vertical y funciona como salida combinada;
+- la fórmula inferior (`A+B`, `A-B`, `AxB`, `A/B`, `A%B`) marca esa salida combinada;
+- al rotar el edificio, las posiciones de `A`, `B` y la fórmula giran junto con los puertos lógicos;
+- las etiquetas compensan su rotación para mantenerse legibles para el jugador.
 
 Esto mantiene visible el orden de operaciones no conmutativas sin depender de una capa de ayuda adicional.
 

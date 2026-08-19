@@ -14,7 +14,7 @@ polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
 
 [node name="VerticalDivider" type="Polygon2D" parent="."]
 color = Color(0.12, 0.13, 0.08, 0.58)
-polygon = PackedVector2Array(-1, -24, 1, -24, 1, 24, -1, 24)
+polygon = PackedVector2Array(-1, -24, 1, -24, 1, 0, -1, 0)
 
 [node name="HorizontalDivider" type="Polygon2D" parent="."]
 color = Color(0.12, 0.13, 0.08, 0.58)

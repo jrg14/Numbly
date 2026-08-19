@@ -4,23 +4,27 @@ class_name PlacementPreview
 @export var cell_size: Vector2 = Vector2(64, 64):
 	set(value):
 		cell_size = value
-		queue_redraw()
+		_refresh_preview_transform()
 
-var is_valid_position: bool = false:
-	set(value):
-		is_valid_position = value
-		queue_redraw()
+var is_valid_position: bool = false
 
 var footprint_size: Vector2i = Vector2i(1, 1):
 	set(value):
 		footprint_size = Vector2i(maxi(value.x, 1), maxi(value.y, 1))
-		queue_redraw()
+		_refresh_preview_transform()
 
-func show_at(world_position: Vector2, valid_position: bool, rotation_degrees_value: float, preview_footprint_size: Vector2i = Vector2i(1, 1)) -> void:
+var _preview_building_data: BuildingData
+var _preview_piece: Node2D
+
+
+func show_at(world_position: Vector2, valid_position: bool, rotation_steps: int, building_data: BuildingData) -> void:
 	global_position = world_position
-	rotation_degrees = rotation_degrees_value
-	footprint_size = preview_footprint_size
+	rotation_degrees = 0.0
+	_set_preview_building_data(building_data)
+	footprint_size = building_data.footprint_size if building_data != null else Vector2i(1, 1)
 	is_valid_position = valid_position
+	_apply_preview_rotation(rotation_steps)
+	_refresh_preview_transform()
 	visible = true
 
 
@@ -28,13 +32,49 @@ func hide_preview() -> void:
 	visible = false
 
 
-func _draw() -> void:
-	var preview_size := cell_size * Vector2(footprint_size)
-	var half_size := preview_size * 0.5
-	var rect := Rect2(-half_size, preview_size)
-	var fill_color := Color(0.2, 0.85, 0.45, 0.22) if is_valid_position else Color(0.95, 0.2, 0.18, 0.22)
-	var outline_color := Color(0.2, 0.85, 0.45, 0.85) if is_valid_position else Color(0.95, 0.2, 0.18, 0.85)
+func _set_preview_building_data(building_data: BuildingData) -> void:
+	if _preview_building_data == building_data:
+		return
 
-	draw_rect(rect, fill_color, true)
-	draw_rect(rect, outline_color, false, 3.0)
-	draw_line(Vector2.ZERO, Vector2(preview_size.x * 0.32, 0.0), outline_color, 4.0)
+	_preview_building_data = building_data
+
+	if _preview_piece != null and is_instance_valid(_preview_piece):
+		_preview_piece.queue_free()
+		_preview_piece = null
+
+	if _preview_building_data == null or _preview_building_data.scene == null:
+		return
+
+	_preview_piece = _preview_building_data.scene.instantiate() as Node2D
+	if _preview_piece == null:
+		return
+
+	add_child(_preview_piece)
+	var building := _preview_piece as Building
+	if building != null:
+		building.apply_building_data(_preview_building_data)
+		building.locked = true
+
+
+func _apply_preview_rotation(rotation_steps: int) -> void:
+	if _preview_piece == null:
+		return
+
+	var building := _preview_piece as Building
+	if building != null:
+		building.set_rotation_steps(rotation_steps)
+	else:
+		_preview_piece.rotation_degrees = rotation_steps * 90.0
+
+
+func _refresh_preview_transform() -> void:
+	if _preview_piece == null:
+		return
+
+	var base_cell_size := 64.0
+	_preview_piece.position = Vector2.ZERO
+	_preview_piece.scale = Vector2(
+		cell_size.x / base_cell_size * float(footprint_size.x),
+		cell_size.y / base_cell_size * float(footprint_size.y)
+	)
+	_preview_piece.modulate = Color(1.0, 1.0, 1.0, 0.68) if is_valid_position else Color(1.0, 0.3, 0.25, 0.58)

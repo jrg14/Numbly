@@ -184,7 +184,8 @@ Sistema de colocación en el tablero.
   - Reglas de rotación, coste y colisión.
 - `placement_preview.gd`
   - Vista previa del edificio antes de colocarlo.
-  - Feedback visual de ubicación válida o inválida.
+  - Instancia la escena real seleccionada para mostrar cómo quedará colocada y rotada.
+  - Aplica transparencia/tinte leve para diferenciar ubicación válida o inválida.
 - `build_command.gd`
   - Objeto de comando para construir, mover, rotar o eliminar.
   - Útil para undo/redo y para registrar acciones.

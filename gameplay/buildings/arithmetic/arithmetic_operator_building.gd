@@ -59,6 +59,7 @@ func set_rotation_steps(rotation_steps: int) -> void:
 	var normalized_steps := rotation_steps % 4
 	rotation_degrees = normalized_steps * 90.0
 	facing = _get_facing_from_operation_rotation_steps(normalized_steps)
+	_update_port_label_rotation()
 
 
 func get_buffered_values() -> Array[int]:
@@ -198,3 +199,13 @@ func _get_facing_from_operation_rotation_steps(rotation_steps: int) -> Vector2i:
 			return Vector2i.UP
 		_:
 			return Vector2i.RIGHT
+
+
+func _update_port_label_rotation() -> void:
+	for label_name in ["InputALabel", "InputBLabel", "OutputLabel"]:
+		var label := get_node_or_null(NodePath(label_name)) as Label
+		if label == null:
+			continue
+
+		label.pivot_offset = label.size * 0.5
+		label.rotation_degrees = -rotation_degrees

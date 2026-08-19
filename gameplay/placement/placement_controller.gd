@@ -396,8 +396,8 @@ func _update_preview(screen_position: Vector2) -> void:
 	_placement_preview.show_at(
 		_grid_manager.grid_to_world_for_footprint(cell, footprint_size),
 		can_place,
-		rotation_steps * 90.0,
-		footprint_size
+		rotation_steps,
+		building_data
 	)
 
 
