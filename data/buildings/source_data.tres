@@ -11,6 +11,7 @@ description = "Genera paquetes numericos con un valor fijo."
 building_type = 0
 scene = ExtResource("2_source_scene")
 cost = 0
+footprint_size = Vector2i(2, 2)
 input_count = 0
 output_count = 1
 tick_interval = 1.0

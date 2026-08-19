@@ -26,6 +26,16 @@ func can_accept_packet(_packet: NumberPacket) -> bool:
 	return false
 
 
+func get_output_target_groups(_packet: NumberPacket = null) -> Array:
+	var groups: Array = []
+	for target_cell in get_perimeter_target_cells():
+		var group: Array[Vector2i] = []
+		group.append(target_cell)
+		groups.append(group)
+
+	return groups
+
+
 func reset_simulation() -> void:
 	_ticks_until_next_packet = _get_generation_interval_ticks()
 

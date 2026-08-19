@@ -11,6 +11,7 @@ description = "Consume dos paquetes numericos y emite la suma."
 building_type = 3
 scene = ExtResource("2_addition_scene")
 cost = 3
+footprint_size = Vector2i(2, 2)
 input_count = 2
 output_count = 1
 tick_interval = 0.0

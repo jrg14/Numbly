@@ -78,7 +78,7 @@ Sistema de tablero y posicionamiento.
 
 - `grid_manager.gd`
   - Gestión del tablero.
-  - Ocupación de celdas.
+  - Ocupación de celdas y footprints multi-celda.
   - Consulta de vecinos, límites y validaciones.
 - `grid_cell.gd`
   - Representación de una celda del grid.
@@ -144,7 +144,8 @@ Base común para todos los edificios.
 
 - `building.gd`
   - Clase base compartida.
-  - API común para entrada, salida, rotación, coste y comportamiento.
+  - API común para entrada, salida, rotación, footprint y comportamiento.
+  - Helpers de celdas ocupadas, perímetro y grupos de salida.
 - `building.tscn`
   - Escena base visual y de nodos para edificios.
 

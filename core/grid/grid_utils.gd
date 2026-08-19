@@ -14,6 +14,10 @@ static func grid_to_local_center(cell: Vector2i, cell_size: Vector2, origin: Vec
 	return origin + Vector2(cell) * cell_size + cell_size * 0.5
 
 
+static func grid_to_local_footprint_center(cell: Vector2i, footprint_size: Vector2i, cell_size: Vector2, origin: Vector2 = Vector2.ZERO) -> Vector2:
+	return origin + Vector2(cell) * cell_size + Vector2(footprint_size) * cell_size * 0.5
+
+
 static func grid_to_local_top_left(cell: Vector2i, cell_size: Vector2, origin: Vector2 = Vector2.ZERO) -> Vector2:
 	return origin + Vector2(cell) * cell_size
 

@@ -61,14 +61,19 @@ func _draw() -> void:
 
 
 func _draw_active_cell() -> void:
-	var half_size := _grid_manager.cell_size * 0.5
-	var center := to_local(_grid_manager.grid_to_world(_cell))
-	var rect := Rect2(center - half_size, _grid_manager.cell_size)
+	var footprint_size := _get_footprint_size()
+	var footprint_pixel_size := _grid_manager.cell_size * Vector2(footprint_size)
+	var center := to_local(_grid_manager.grid_to_world_for_footprint(_cell, footprint_size))
+	var rect := Rect2(center - footprint_pixel_size * 0.5, footprint_pixel_size)
 	var color := invalid_cell_color if _is_preview and not _is_valid else active_cell_color
 	draw_rect(rect, color, false, 3.0)
 
 
 func _draw_input_routes() -> void:
+	if _is_arithmetic_focus():
+		_draw_arithmetic_input_routes()
+		return
+
 	for direction in _get_input_directions():
 		if not _grid_manager.is_in_bounds(_cell + direction):
 			continue
@@ -81,17 +86,35 @@ func _draw_input_routes() -> void:
 		_draw_connection_dot(edge, color)
 
 
-func _draw_output_routes() -> void:
-	for direction in _get_output_directions():
-		if not _grid_manager.is_in_bounds(_cell + direction):
+func _draw_arithmetic_input_routes() -> void:
+	var feeder_direction := -_get_facing_for_focus()
+	for input_cell in _get_arithmetic_input_cells():
+		var feeder_cell := input_cell + feeder_direction
+		if not _grid_manager.is_in_bounds(input_cell):
 			continue
 
-		var state := _get_output_state(direction)
+		var state := _get_input_state_for_cell(input_cell, feeder_cell)
+		var color := _get_route_color(state, input_color)
+		var input_center := to_local(_grid_manager.grid_to_world(input_cell))
+
+		if _grid_manager.is_in_bounds(feeder_cell):
+			var feeder_center := to_local(_grid_manager.grid_to_world(feeder_cell))
+			_draw_arrow(feeder_center, input_center, color, 3.0)
+
+		_draw_connection_dot(input_center, color)
+
+
+func _draw_output_routes() -> void:
+	var center := to_local(_grid_manager.grid_to_world_for_footprint(_cell, _get_footprint_size()))
+	for target_cell in _get_output_target_cells():
+		if not _grid_manager.is_in_bounds(target_cell):
+			continue
+
+		var state := _get_output_state_for_cell(target_cell)
 		var color := _get_route_color(state, output_color)
-		var center := to_local(_grid_manager.grid_to_world(_cell))
-		var edge := center + Vector2(direction) * _grid_manager.cell_size * 0.42
-		_draw_arrow(center, edge, color, 4.0)
-		_draw_connection_dot(edge, color)
+		var target_center := to_local(_grid_manager.grid_to_world(target_cell))
+		_draw_arrow(center, target_center, color, 4.0)
+		_draw_connection_dot(target_center, color)
 
 
 func _draw_arrow(start: Vector2, end: Vector2, color: Color, width: float) -> void:
@@ -157,6 +180,34 @@ func _get_output_directions() -> Array[Vector2i]:
 		_:
 			return _single_direction(_get_facing_from_rotation(_rotation_steps))
 
+	return _empty_directions()
+
+
+func _get_output_target_cells() -> Array[Vector2i]:
+	if _building != null:
+		return _building.get_output_target_cells(NumberPacket.new())
+
+	if _building_data == null:
+		return _empty_cells()
+
+	var facing := _get_facing_from_rotation(_rotation_steps)
+	var footprint_size := _get_footprint_size()
+
+	match _building_data.building_type:
+		BuildingData.BuildingType.SOURCE:
+			return _get_perimeter_target_cells(_cell, footprint_size)
+		BuildingData.BuildingType.OUTPUT:
+			return _empty_cells()
+		BuildingData.BuildingType.SPLITTER, BuildingData.BuildingType.FILTER:
+			var target_cells: Array[Vector2i] = []
+			target_cells.append(_cell + facing)
+			target_cells.append(_cell + _rotate_clockwise(facing))
+			return target_cells
+		_:
+			return _get_edge_target_cells(_cell, footprint_size, facing)
+
+	return _empty_cells()
+
 
 func _get_input_directions() -> Array[Vector2i]:
 	if _building != null:
@@ -198,6 +249,8 @@ func _get_input_directions() -> Array[Vector2i]:
 		_:
 			return _get_operator_input_directions(facing)
 
+	return _empty_directions()
+
 
 func _single_direction(direction: Vector2i) -> Array[Vector2i]:
 	var directions: Array[Vector2i] = []
@@ -208,6 +261,11 @@ func _single_direction(direction: Vector2i) -> Array[Vector2i]:
 func _empty_directions() -> Array[Vector2i]:
 	var directions: Array[Vector2i] = []
 	return directions
+
+
+func _empty_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	return cells
 
 
 func _all_directions() -> Array[Vector2i]:
@@ -236,12 +294,50 @@ func _get_output_state(direction: Vector2i) -> StringName:
 	return &"blocked"
 
 
+func _get_output_state_for_cell(target_cell: Vector2i) -> StringName:
+	var target := _get_building_at(target_cell)
+	if target == null:
+		return &"potential"
+
+	if _building != null:
+		if _building is SourceBuilding and not (target is SourceBuilding):
+			return &"connected"
+
+		var packet := NumberPacket.new()
+		if target.can_accept_packet_from_cell(packet, _building, target_cell):
+			return &"connected"
+
+		return &"blocked"
+
+	if target is SourceBuilding:
+		return &"blocked"
+
+	if target.can_accept_packet(NumberPacket.new()):
+		return &"connected"
+
+	return &"blocked"
+
+
 func _get_input_state(direction: Vector2i) -> StringName:
 	var neighbor := _get_building_at(_cell + direction)
 	if neighbor == null:
 		return &"potential"
 
 	if _can_neighbor_feed_focus(neighbor, direction):
+		return &"connected"
+
+	return &"blocked"
+
+
+func _get_input_state_for_cell(input_cell: Vector2i, feeder_cell: Vector2i) -> StringName:
+	var neighbor := _get_building_at(feeder_cell)
+	if neighbor == null:
+		return &"potential"
+
+	if neighbor is OutputBuilding:
+		return &"blocked"
+
+	if neighbor.get_output_target_cells(NumberPacket.new()).has(input_cell):
 		return &"connected"
 
 	return &"blocked"
@@ -310,3 +406,92 @@ func _get_route_output_directions(building: Building) -> Array[Vector2i]:
 		return _single_direction(building.facing)
 
 	return building.get_output_directions(NumberPacket.new())
+
+
+func _get_footprint_size() -> Vector2i:
+	if _building != null:
+		return _building.footprint_size
+
+	if _building_data != null:
+		return _building_data.footprint_size
+
+	return Vector2i(1, 1)
+
+
+func _get_facing_for_focus() -> Vector2i:
+	if _building != null:
+		return _building.facing
+
+	return _get_facing_from_rotation(_rotation_steps)
+
+
+func _is_arithmetic_focus() -> bool:
+	if _building != null:
+		return _building is ArithmeticOperatorBuilding
+
+	if _building_data == null:
+		return false
+
+	return _building_data.building_type == BuildingData.BuildingType.ADDITION \
+		or _building_data.building_type == BuildingData.BuildingType.MULTIPLICATION \
+		or _building_data.building_type == BuildingData.BuildingType.SUBTRACTION \
+		or _building_data.building_type == BuildingData.BuildingType.DIVISION \
+		or _building_data.building_type == BuildingData.BuildingType.MODULO
+
+
+func _get_arithmetic_input_cells() -> Array[Vector2i]:
+	if _building is ArithmeticOperatorBuilding:
+		return (_building as ArithmeticOperatorBuilding).get_input_cells()
+
+	var cells: Array[Vector2i] = []
+	var footprint_size := _get_footprint_size()
+	var facing := _get_facing_for_focus()
+
+	if facing == Vector2i.RIGHT:
+		cells.append(_cell)
+		cells.append(_cell + Vector2i(0, 1))
+	elif facing == Vector2i.LEFT:
+		cells.append(_cell + Vector2i(footprint_size.x - 1, 0))
+		cells.append(_cell + Vector2i(footprint_size.x - 1, 1))
+	elif facing == Vector2i.DOWN:
+		cells.append(_cell)
+		cells.append(_cell + Vector2i(1, 0))
+	elif facing == Vector2i.UP:
+		cells.append(_cell + Vector2i(0, footprint_size.y - 1))
+		cells.append(_cell + Vector2i(1, footprint_size.y - 1))
+
+	return cells
+
+
+func _get_edge_target_cells(cell: Vector2i, footprint_size: Vector2i, direction: Vector2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+
+	if direction == Vector2i.RIGHT:
+		for y in range(footprint_size.y):
+			cells.append(cell + Vector2i(footprint_size.x, y))
+	elif direction == Vector2i.LEFT:
+		for y in range(footprint_size.y):
+			cells.append(cell + Vector2i(-1, y))
+	elif direction == Vector2i.DOWN:
+		for x in range(footprint_size.x):
+			cells.append(cell + Vector2i(x, footprint_size.y))
+	elif direction == Vector2i.UP:
+		for x in range(footprint_size.x):
+			cells.append(cell + Vector2i(x, -1))
+
+	return cells
+
+
+func _get_perimeter_target_cells(cell: Vector2i, footprint_size: Vector2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+
+	for target_cell in _get_edge_target_cells(cell, footprint_size, Vector2i.UP):
+		cells.append(target_cell)
+	for target_cell in _get_edge_target_cells(cell, footprint_size, Vector2i.RIGHT):
+		cells.append(target_cell)
+	for target_cell in _get_edge_target_cells(cell, footprint_size, Vector2i.DOWN):
+		cells.append(target_cell)
+	for target_cell in _get_edge_target_cells(cell, footprint_size, Vector2i.LEFT):
+		cells.append(target_cell)
+
+	return cells

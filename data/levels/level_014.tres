@@ -13,21 +13,21 @@
 [sub_resource type="Resource" id="SourceA"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 1)
+cell = Vector2i(0, 2)
 locked = true
 generated_value = 15
 
 [sub_resource type="Resource" id="SourceB"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 6)
+cell = Vector2i(0, 12)
 locked = true
 generated_value = 9
 
 [sub_resource type="Resource" id="Output"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("4_output_data")
-cell = Vector2i(10, 3)
+cell = Vector2i(20, 6)
 locked = true
 target_value = 6
 required_count = 2
@@ -109,7 +109,7 @@ script = ExtResource("1_level_data")
 id = &"level_014"
 display_name = "Dos diferencias"
 objective_text = "Produce dos paquetes de valor 6 restando 15 menos 9."
-grid_size = Vector2i(11, 8)
+grid_size = Vector2i(22, 16)
 initial_buildings = Array[LevelBuildingData]([SubResource("SourceA"), SubResource("SourceB"), SubResource("Output")])
 allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtResource("3_operation_data")])
 objectives = Array[ObjectiveData]([SubResource("Target"), SubResource("MachineLimit"), SubResource("TimeLimit"), SubResource("BudgetLimit")])

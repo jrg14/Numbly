@@ -169,33 +169,51 @@ func _on_building_packet_output(packet: NumberPacket, from_building: Building) -
 		return
 
 	if from_building is SourceBuilding:
-		for direction in [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
-			_route_packet_to_direction(packet.duplicate_packet(), from_building, direction, true)
+		for target_group in from_building.get_output_target_groups(packet):
+			_route_packet_to_target_group(packet.duplicate_packet(), from_building, target_group, true)
 		return
 
-	var output_directions := from_building.get_output_directions(packet)
-	for i in range(output_directions.size()):
-		var routed_packet := packet if i == output_directions.size() - 1 else packet.duplicate_packet()
-		_route_packet_to_direction(routed_packet, from_building, output_directions[i], false)
+	var output_target_groups := from_building.get_output_target_groups(packet)
+	for i in range(output_target_groups.size()):
+		var routed_packet := packet if i == output_target_groups.size() - 1 else packet.duplicate_packet()
+		_route_packet_to_target_group(routed_packet, from_building, output_target_groups[i], false)
 
 
-func _route_packet_to_direction(packet: NumberPacket, from_building: Building, direction: Vector2i, skip_empty: bool) -> void:
-	var target_cell: Vector2i = from_building.grid_position + direction
-	var target_building: Building = _grid_manager.get_occupant(target_cell) as Building
+func _route_packet_to_target_group(packet: NumberPacket, from_building: Building, target_group: Array, skip_empty: bool) -> void:
+	var first_target_cell := Vector2i.ZERO
+	var has_target_cell := false
+	var first_rejecting_building: Building
 
-	if target_building != null and target_building.accept_packet_from(packet, from_building):
-		packet_transferred.emit(packet, from_building, target_building)
+	for target in target_group:
+		var target_cell: Vector2i = target
+		if not has_target_cell:
+			first_target_cell = target_cell
+			has_target_cell = true
+
+		var target_building := _grid_manager.get_occupant(target_cell) as Building
+		if target_building == null:
+			continue
+
+		if target_building.can_accept_packet_from_cell(packet, from_building, target_cell) \
+			and target_building.accept_packet_from_cell(packet, from_building, target_cell):
+			packet_transferred.emit(packet, from_building, target_building)
+			return
+
+		if first_rejecting_building == null:
+			first_rejecting_building = target_building
+
+	if not has_target_cell:
 		return
 
-	if target_building == null:
+	if first_rejecting_building == null:
 		if skip_empty:
 			return
 
-		connection_error.emit("No receiver at %s for packet %d from %s." % [target_cell, packet.value, from_building.name])
+		connection_error.emit("No receiver at %s for packet %d from %s." % [first_target_cell, packet.value, from_building.name])
 	else:
-		connection_error.emit("%s rejected packet %d from %s." % [target_building.name, packet.value, from_building.name])
+		connection_error.emit("%s rejected packet %d from %s." % [first_rejecting_building.name, packet.value, from_building.name])
 
-	packet_blocked.emit(packet, from_building, target_cell)
+	packet_blocked.emit(packet, from_building, first_target_cell)
 
 
 func _on_output_target_reached(total_accepted: int, output: OutputBuilding) -> void:

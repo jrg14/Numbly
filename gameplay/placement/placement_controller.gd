@@ -8,7 +8,6 @@ signal rotation_changed(rotation_steps: int)
 signal erase_mode_changed(enabled: bool)
 signal history_changed(can_undo: bool, can_redo: bool)
 signal layout_changed
-signal route_focus_changed(cell, building, building_data, rotation_steps, is_preview, is_valid)
 
 @export var grid_manager_path: NodePath
 @export var placement_preview_path: NodePath
@@ -57,7 +56,6 @@ func _process(_delta: float) -> void:
 		_stop_drag_removing()
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
-		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
 		return
 
 	_update_preview(get_viewport().get_mouse_position())
@@ -149,16 +147,16 @@ func _place_selected_at(cell: Vector2i, placement_rotation_steps: int) -> bool:
 	if not input_enabled or _grid_manager == null or selected_building_index == -1:
 		return false
 
-	if not _grid_manager.can_place_piece(cell):
-		placement_failed.emit(cell)
-		return false
-
 	if max_placed_buildings > 0 and _get_placed_building_count() >= max_placed_buildings:
 		placement_failed.emit(cell)
 		return false
 
 	var building_data := available_building_data[selected_building_index]
 	if building_data == null or building_data.scene == null:
+		placement_failed.emit(cell)
+		return false
+
+	if not _grid_manager.can_place_piece(cell, building_data.footprint_size):
 		placement_failed.emit(cell)
 		return false
 
@@ -196,7 +194,7 @@ func remove_piece_at(cell: Vector2i) -> Node2D:
 	command.command_type = BuildCommand.CommandType.REMOVE
 	command.grid_manager = _grid_manager
 	command.build_parent = _get_build_parent()
-	command.cell = cell
+	command.cell = building.grid_position if building != null else cell
 
 	if _execute_command(command):
 		return command.piece
@@ -216,9 +214,7 @@ func set_erase_mode(enabled: bool) -> void:
 	if _placement_preview != null:
 		_placement_preview.hide_preview()
 
-	if erase_mode:
-		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
-	else:
+	if not erase_mode:
 		_update_preview(get_viewport().get_mouse_position())
 
 
@@ -379,7 +375,6 @@ func _update_preview(screen_position: Vector2) -> void:
 	if erase_mode or _grid_manager == null or _placement_preview == null or selected_building_index == -1:
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
-		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
 		return
 
 	var cell := _grid_manager.world_to_grid(_screen_to_world(screen_position))
@@ -387,24 +382,23 @@ func _update_preview(screen_position: Vector2) -> void:
 
 	if not _grid_manager.is_in_bounds(cell):
 		_placement_preview.hide_preview()
-		route_focus_changed.emit(Vector2i.ZERO, null, null, 0, false, false)
 		return
 
 	var occupant := _grid_manager.get_occupant(cell) as Building
 	if occupant != null:
 		_placement_preview.hide_preview()
-		route_focus_changed.emit(cell, occupant, null, 0, false, true)
 		return
 
 	var building_data := available_building_data[selected_building_index]
-	var can_place := _grid_manager.can_place_piece(cell)
+	var footprint_size := building_data.footprint_size if building_data != null else Vector2i(1, 1)
+	var can_place := _grid_manager.can_place_piece(cell, footprint_size)
 
 	_placement_preview.show_at(
-		_grid_manager.grid_to_world(cell),
+		_grid_manager.grid_to_world_for_footprint(cell, footprint_size),
 		can_place,
-		rotation_steps * 90.0
+		rotation_steps * 90.0,
+		footprint_size
 	)
-	route_focus_changed.emit(cell, null, building_data, rotation_steps, true, can_place)
 
 
 func _screen_to_world(screen_position: Vector2) -> Vector2:
@@ -449,7 +443,9 @@ func _try_drag_place_at_cell(cell: Vector2i, direction: Vector2i) -> void:
 
 	_drag_placed_cells[cell] = true
 
-	if _grid_manager == null or not _grid_manager.can_place_piece(cell):
+	var building_data := available_building_data[selected_building_index]
+	var footprint_size := building_data.footprint_size if building_data != null else Vector2i(1, 1)
+	if _grid_manager == null or not _grid_manager.can_place_piece(cell, footprint_size):
 		return
 
 	_place_selected_at(cell, _get_rotation_steps_for_direction(direction))
@@ -545,7 +541,12 @@ func _execute_command(command: BuildCommand) -> bool:
 
 	_undo_stack.append(command)
 	_redo_stack.clear()
-	_update_conveyor_routes_around(command.cell)
+	var footprint_size := Vector2i(1, 1)
+	var building := command.piece as Building
+	if building != null:
+		footprint_size = building.footprint_size
+
+	_update_conveyor_routes_around(command.cell, footprint_size)
 	history_changed.emit(can_undo(), can_redo())
 	layout_changed.emit()
 	return true
@@ -576,12 +577,13 @@ func _get_placed_building_count() -> int:
 	return count
 
 
-func _update_conveyor_routes_around(center_cell: Vector2i) -> void:
+func _update_conveyor_routes_around(center_cell: Vector2i, footprint_size: Vector2i = Vector2i(1, 1)) -> void:
 	if _grid_manager == null:
 		return
 
-	for direction in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
-		_update_conveyor_route_at(center_cell + direction)
+	for y in range(-1, footprint_size.y + 1):
+		for x in range(-1, footprint_size.x + 1):
+			_update_conveyor_route_at(center_cell + Vector2i(x, y))
 
 
 func _update_all_conveyor_routes() -> void:
@@ -607,10 +609,10 @@ func _update_conveyor_route_at(cell: Vector2i) -> void:
 		if neighbor == null:
 			continue
 
-		if _neighbor_can_feed_conveyor(neighbor, direction):
+		if _neighbor_can_feed_conveyor(neighbor, cell, cell + direction):
 			input_options.append(direction)
 
-		if _conveyor_can_feed_neighbor(neighbor, direction):
+		if _conveyor_can_feed_neighbor(conveyor, neighbor, cell + direction):
 			output_options.append(direction)
 
 	var output_direction := _choose_output_direction(conveyor, output_options, input_options)
@@ -647,7 +649,7 @@ func _choose_input_direction(conveyor: ConveyorBuilding, input_options: Array[Ve
 	return -output_direction
 
 
-func _neighbor_can_feed_conveyor(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:
+func _neighbor_can_feed_conveyor(neighbor: Building, conveyor_cell: Vector2i, neighbor_cell: Vector2i) -> bool:
 	if neighbor is SourceBuilding:
 		return true
 
@@ -655,12 +657,13 @@ func _neighbor_can_feed_conveyor(neighbor: Building, direction_to_neighbor: Vect
 		return false
 
 	if neighbor is ConveyorBuilding:
+		var direction_to_neighbor := neighbor_cell - conveyor_cell
 		return neighbor.facing == -direction_to_neighbor
 
-	return _get_route_output_directions(neighbor).has(-direction_to_neighbor)
+	return neighbor.get_output_target_cells(NumberPacket.new()).has(conveyor_cell)
 
 
-func _conveyor_can_feed_neighbor(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:
+func _conveyor_can_feed_neighbor(conveyor: ConveyorBuilding, neighbor: Building, neighbor_cell: Vector2i) -> bool:
 	if neighbor is SourceBuilding:
 		return false
 
@@ -668,19 +671,19 @@ func _conveyor_can_feed_neighbor(neighbor: Building, direction_to_neighbor: Vect
 		return true
 
 	if neighbor is ArithmeticOperatorBuilding:
-		return true
+		return neighbor.can_accept_packet_from_cell(NumberPacket.new(), conveyor, neighbor_cell)
 
 	if neighbor is ConveyorBuilding:
+		var direction_to_neighbor := neighbor_cell - conveyor.grid_position
 		return (neighbor as ConveyorBuilding).facing != -direction_to_neighbor
 
 	if neighbor is SplitterBuilding or neighbor is FilterBuilding:
-		var output_directions := _get_route_output_directions(neighbor)
-		return not output_directions.has(-direction_to_neighbor)
+		return neighbor.can_accept_packet_from_cell(NumberPacket.new(), conveyor, neighbor_cell)
 
 	if neighbor is BufferBuilding or neighbor is GateBuilding:
-		return -direction_to_neighbor != neighbor.facing
+		return neighbor.can_accept_packet_from_cell(NumberPacket.new(), conveyor, neighbor_cell)
 
-	return neighbor.can_accept_packet(NumberPacket.new())
+	return neighbor.can_accept_packet_from_cell(NumberPacket.new(), conveyor, neighbor_cell)
 
 
 func _get_route_output_directions(building: Building) -> Array[Vector2i]:

@@ -26,7 +26,15 @@ func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bo
 	if from_building == null:
 		return can_accept_packet(packet)
 
-	var incoming_direction := from_building.grid_position - grid_position
+	var incoming_direction := _get_incoming_direction(from_building)
+	return can_accept_packet(packet) and not _get_filter_output_directions().has(incoming_direction)
+
+
+func can_accept_packet_from_cell(packet: NumberPacket, from_building: Building, target_cell: Vector2i) -> bool:
+	if from_building == null:
+		return can_accept_packet(packet)
+
+	var incoming_direction := _get_incoming_direction(from_building, target_cell)
 	return can_accept_packet(packet) and not _get_filter_output_directions().has(incoming_direction)
 
 
@@ -85,3 +93,15 @@ func _get_filter_output_directions() -> Array[Vector2i]:
 	directions.append(facing)
 	directions.append(_rotate_clockwise(facing))
 	return directions
+
+
+func _get_incoming_direction(from_building: Building, target_cell: Vector2i = Vector2i(-9999, -9999)) -> Vector2i:
+	if target_cell.x < -9000:
+		target_cell = grid_position
+
+	var origin_cell := from_building.get_nearest_occupied_cell_to(target_cell)
+	var delta := origin_cell - target_cell
+	if absi(delta.x) >= absi(delta.y):
+		return Vector2i.RIGHT if delta.x > 0 else Vector2i.LEFT
+
+	return Vector2i.DOWN if delta.y > 0 else Vector2i.UP

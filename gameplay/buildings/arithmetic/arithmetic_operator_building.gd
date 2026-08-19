@@ -9,7 +9,6 @@ signal operation_created(building: Building, input_values: Array[int], result: i
 @export var operator_symbol: String = "?"
 
 var _input_buffers: Dictionary = {}
-var _lane_order: Array[Vector2i] = []
 var _ticks_until_next_operation: int = 0
 
 
@@ -18,11 +17,21 @@ func can_accept_packet(_packet: NumberPacket) -> bool:
 
 
 func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bool:
+	if from_building == null:
+		return can_accept_packet(packet)
+
+	var target_cell := grid_position
+	if from_building != null:
+		target_cell = get_nearest_occupied_cell_to(from_building.grid_position)
+
+	return can_accept_packet_from_cell(packet, from_building, target_cell)
+
+
+func can_accept_packet_from_cell(packet: NumberPacket, _from_building: Building, target_cell: Vector2i) -> bool:
 	if not can_accept_packet(packet):
 		return false
 
-	var lane := _get_input_lane(from_building)
-	var lane_index := _get_lane_index_for_acceptance(lane)
+	var lane_index := _get_input_lane_index_for_cell(target_cell)
 	if lane_index == -1:
 		return false
 
@@ -31,7 +40,6 @@ func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bo
 
 func reset_simulation() -> void:
 	_input_buffers.clear()
-	_lane_order.clear()
 	_ticks_until_next_operation = 0
 
 
@@ -47,11 +55,17 @@ func simulation_tick(_delta: float) -> void:
 	_try_emit_operation()
 
 
+func set_rotation_steps(rotation_steps: int) -> void:
+	var normalized_steps := rotation_steps % 4
+	rotation_degrees = normalized_steps * 90.0
+	facing = _get_facing_from_operation_rotation_steps(normalized_steps)
+
+
 func get_buffered_values() -> Array[int]:
 	var values: Array[int] = []
 
-	for lane in _lane_order:
-		var lane_buffer := _input_buffers[lane] as Array
+	for lane_index in range(input_count):
+		var lane_buffer := _get_lane_buffer(lane_index)
 		for packet in lane_buffer:
 			var number_packet := packet as NumberPacket
 			values.append(number_packet.value)
@@ -60,12 +74,18 @@ func get_buffered_values() -> Array[int]:
 
 
 func _on_packet_accepted_from(packet: NumberPacket, from_building: Building) -> void:
-	var lane := _get_input_lane(from_building)
-	if not _input_buffers.has(lane):
-		_input_buffers[lane] = []
-		_lane_order.append(lane)
+	var target_cell := grid_position
+	if from_building != null:
+		target_cell = get_nearest_occupied_cell_to(from_building.grid_position)
+	_on_packet_accepted_from_cell(packet, from_building, target_cell)
 
-	var lane_buffer := _input_buffers[lane] as Array
+
+func _on_packet_accepted_from_cell(packet: NumberPacket, _from_building: Building, target_cell: Vector2i) -> void:
+	var lane_index := _get_input_lane_index_for_cell(target_cell)
+	if lane_index == -1:
+		return
+
+	var lane_buffer := _get_lane_buffer(lane_index)
 	lane_buffer.append(packet)
 	_try_emit_operation()
 
@@ -76,8 +96,7 @@ func _try_emit_operation() -> void:
 
 	var input_values: Array[int] = []
 	for i in range(input_count):
-		var lane := _lane_order[i]
-		var lane_buffer := _input_buffers[lane] as Array
+		var lane_buffer := _get_lane_buffer(i)
 		var packet := lane_buffer.pop_front() as NumberPacket
 		input_values.append(packet.value)
 
@@ -110,35 +129,54 @@ func _get_output_source_id() -> StringName:
 	return StringName(operator_symbol)
 
 
-func _has_ready_inputs() -> bool:
-	if _lane_order.size() < input_count:
-		return false
+func get_output_target_groups(_packet: NumberPacket = null) -> Array:
+	var groups: Array = []
+	groups.append(get_edge_target_cells(facing))
+	return groups
 
+
+func get_input_cells() -> Array[Vector2i]:
+	var input_cells: Array[Vector2i] = []
+
+	if facing == Vector2i.RIGHT:
+		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, footprint_size.y - 1))
+		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, 0))
+	elif facing == Vector2i.LEFT:
+		input_cells.append(grid_position)
+		input_cells.append(grid_position + Vector2i(0, footprint_size.y - 1))
+	elif facing == Vector2i.DOWN:
+		input_cells.append(grid_position + Vector2i(1, 0))
+		input_cells.append(grid_position)
+	elif facing == Vector2i.UP:
+		input_cells.append(grid_position + Vector2i(0, footprint_size.y - 1))
+		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, footprint_size.y - 1))
+
+	return input_cells
+
+
+func _has_ready_inputs() -> bool:
 	for i in range(input_count):
-		var lane := _lane_order[i]
-		var lane_buffer := _input_buffers[lane] as Array
+		var lane_buffer := _get_lane_buffer(i)
 		if lane_buffer.is_empty():
 			return false
 
 	return true
 
 
-func _get_input_lane(from_building: Building) -> Vector2i:
-	if from_building == null:
-		return Vector2i.ZERO
+func _get_input_lane_index_for_cell(target_cell: Vector2i) -> int:
+	var input_cells := get_input_cells()
+	for i in range(mini(input_count, input_cells.size())):
+		if input_cells[i] == target_cell:
+			return i
 
-	return from_building.grid_position - grid_position
+	return -1
 
 
-func _get_lane_index_for_acceptance(lane: Vector2i) -> int:
-	var existing_index := _lane_order.find(lane)
-	if existing_index != -1:
-		return existing_index
+func _get_lane_buffer(lane_index: int) -> Array:
+	if not _input_buffers.has(lane_index):
+		_input_buffers[lane_index] = []
 
-	if _lane_order.size() >= input_count:
-		return -1
-
-	return _lane_order.size()
+	return _input_buffers[lane_index] as Array
 
 
 func _get_total_buffered_packets() -> int:
@@ -148,3 +186,15 @@ func _get_total_buffered_packets() -> int:
 		total += (_input_buffers[lane] as Array).size()
 
 	return total
+
+
+func _get_facing_from_operation_rotation_steps(rotation_steps: int) -> Vector2i:
+	match rotation_steps % 4:
+		0:
+			return Vector2i.DOWN
+		1:
+			return Vector2i.LEFT
+		2:
+			return Vector2i.UP
+		_:
+			return Vector2i.RIGHT

@@ -252,6 +252,15 @@ Ejemplo:
 
 El tamaño del tablero puede convertirse posteriormente en parte del puzzle.
 
+Las máquinas principales no tienen por qué ocupar una única celda. En la implementación actual, las fuentes y los operadores aritméticos usan footprints `2x2`, lo que permite expresar puertos físicos distintos:
+
+* una fuente `2x2` puede generar números por cada celda de sus cuatro lados;
+* un operador `2x2` reserva dos celdas para entradas separadas A y B;
+* las otras dos celdas del operador actúan como una salida combinada;
+* los outputs de objetivo pueden mantenerse como casilla única para que la entrega siga siendo clara.
+
+Esta separación hace que operaciones no conmutativas como resta, división y módulo tengan un orden visible: A - B no es lo mismo que B - A.
+
 ---
 
 # 6. Sistema de estrellas

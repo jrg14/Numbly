@@ -13,21 +13,21 @@
 [sub_resource type="Resource" id="SourceA"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 2)
+cell = Vector2i(0, 4)
 locked = true
 generated_value = 20
 
 [sub_resource type="Resource" id="SourceB"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 5)
+cell = Vector2i(0, 10)
 locked = true
 generated_value = 8
 
 [sub_resource type="Resource" id="Output"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("4_output_data")
-cell = Vector2i(9, 4)
+cell = Vector2i(18, 8)
 locked = true
 target_value = 12
 required_count = 1
@@ -109,7 +109,7 @@ script = ExtResource("1_level_data")
 id = &"level_013"
 display_name = "Resta grande"
 objective_text = "Haz entrar 20 antes que 8 para producir 12."
-grid_size = Vector2i(10, 8)
+grid_size = Vector2i(20, 16)
 initial_buildings = Array[LevelBuildingData]([SubResource("SourceA"), SubResource("SourceB"), SubResource("Output")])
 allowed_buildings = Array[BuildingData]([ExtResource("5_conveyor_data"), ExtResource("3_operation_data")])
 objectives = Array[ObjectiveData]([SubResource("Target"), SubResource("MachineLimit"), SubResource("TimeLimit"), SubResource("BudgetLimit")])

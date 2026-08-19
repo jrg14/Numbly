@@ -5,7 +5,6 @@ extends Node2D
 @onready var grid_manager: GridManager = $GridManager
 @onready var buildings_root: Node2D = $Buildings
 @onready var packet_visualizer: PacketVisualizer = $PacketVisuals
-@onready var route_overlay: RouteOverlay = $RouteOverlay
 @onready var level_controller: LevelController = $LevelController
 @onready var placement_controller: PlacementController = $PlacementController
 @onready var simulation_manager: SimulationManager = $SimulationManager
@@ -71,7 +70,6 @@ func _ready() -> void:
 	placement_controller.erase_mode_changed.connect(_on_erase_mode_changed)
 	placement_controller.history_changed.connect(_on_history_changed)
 	placement_controller.layout_changed.connect(_on_layout_changed)
-	placement_controller.route_focus_changed.connect(_on_route_focus_changed)
 	simulation_manager.simulation_started.connect(_refresh_play_pause_label)
 	simulation_manager.simulation_paused.connect(_refresh_play_pause_label)
 	simulation_manager.simulation_tick_completed.connect(_on_simulation_tick_completed)
@@ -108,7 +106,6 @@ func reset_level() -> void:
 	_level_completed = false
 	_hide_completion_overlay()
 	packet_visualizer.clear_visuals()
-	route_overlay.hide_routes()
 	simulation_manager.reset()
 	placement_controller.clear_history()
 	placement_controller.set_erase_mode(false)
@@ -215,19 +212,12 @@ func _on_history_changed(can_undo: bool, can_redo: bool) -> void:
 	redo_button.disabled = not can_redo
 
 
-func _on_route_focus_changed(cell: Vector2i, building: Building, building_data: BuildingData, rotation_steps: int, is_preview: bool, is_valid: bool) -> void:
-	if building == null and building_data == null:
-		route_overlay.hide_routes()
-		return
-
-	route_overlay.show_focus(cell, building, building_data, rotation_steps, is_preview, is_valid)
-
-
 func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
 	_ensure_build_button_count(available_buildings.size())
 
 	for i in range(build_buttons.size()):
 		var button := build_buttons[i]
+		_apply_mobile_button_style(button, Vector2(168, 60), 19)
 		var has_building := i < available_buildings.size() and available_buildings[i] != null
 		button.visible = has_building
 		button.disabled = not has_building
@@ -241,7 +231,7 @@ func _ensure_build_button_count(count: int) -> void:
 	while build_buttons.size() < count:
 		var button := Button.new()
 		button.name = "BuildButton%d" % (build_buttons.size() + 1)
-		button.custom_minimum_size = Vector2(144, 52)
+		_apply_mobile_button_style(button, Vector2(168, 60), 19)
 		button.layout_mode = 2
 		_build_palette.add_child(button)
 		button.pressed.connect(_on_build_button_pressed.bind(build_buttons.size()))
@@ -277,14 +267,14 @@ func _create_build_palette() -> void:
 	scroll.add_child(_build_palette)
 
 	for button in build_buttons:
-		button.custom_minimum_size = Vector2(144, 52)
+		_apply_mobile_button_style(button, Vector2(168, 60), 19)
 		button.reparent(_build_palette)
 
 
 func _create_erase_button() -> void:
 	erase_button = Button.new()
 	erase_button.name = "EraseButton"
-	erase_button.custom_minimum_size = Vector2(88, 48)
+	_apply_mobile_button_style(erase_button, Vector2(92, 56), 18)
 	erase_button.toggle_mode = true
 	erase_button.text = "Borrar"
 	controls.add_child(erase_button)
@@ -295,25 +285,29 @@ func _configure_mobile_hud() -> void:
 	var viewport_size := get_viewport_rect().size
 	var side_margin := 10.0
 	var top_margin := 10.0
-	var control_height := 48.0
-	var palette_height := 78.0
+	var control_height := 56.0
+	var palette_height := 96.0
 
 	controls.offset_left = side_margin
 	controls.offset_top = top_margin
 	controls.offset_right = viewport_size.x - side_margin
 	controls.offset_bottom = top_margin + control_height
 	controls.alignment = BoxContainer.ALIGNMENT_CENTER
-	controls.add_theme_constant_override("separation", 6)
+	controls.add_theme_constant_override("separation", 8)
 
 	for button in [play_pause_button, menu_button, undo_button, redo_button, reset_button, erase_button, rotate_button]:
 		if button != null:
-			button.custom_minimum_size = Vector2(78, control_height)
+			_apply_mobile_button_style(button, Vector2(92, control_height), 18)
+
+	for button in build_buttons:
+		_apply_mobile_button_style(button, Vector2(168, 60), 19)
 
 	medal_progress_label.offset_left = side_margin
-	medal_progress_label.offset_top = top_margin + control_height + 6.0
+	medal_progress_label.offset_top = top_margin + control_height + 8.0
 	medal_progress_label.offset_right = viewport_size.x - side_margin
-	medal_progress_label.offset_bottom = top_margin + control_height + 30.0
+	medal_progress_label.offset_bottom = top_margin + control_height + 36.0
 	medal_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	medal_progress_label.add_theme_font_size_override("font_size", 21)
 	_refresh_medal_progress()
 
 	status_label.visible = false
@@ -334,8 +328,8 @@ func _fit_board_to_viewport(level_grid_size: Vector2i) -> void:
 		return
 
 	var viewport_size := get_viewport_rect().size
-	var board_top := 118.0
-	var bottom_reserved := 94.0
+	var board_top := 128.0
+	var bottom_reserved := 112.0
 	var side_margin := 16.0
 	var available_width := maxf(viewport_size.x - side_margin * 2.0, 1.0)
 	var available_height := maxf(viewport_size.y - board_top - bottom_reserved, 1.0)
@@ -359,14 +353,17 @@ func _fit_board_to_viewport(level_grid_size: Vector2i) -> void:
 		if preview != null:
 			preview.cell_size = grid_manager.cell_size
 
-	route_overlay.queue_redraw()
+
+func _apply_mobile_button_style(button: Button, minimum_size: Vector2, font_size: int) -> void:
+	button.custom_minimum_size = minimum_size
+	button.add_theme_font_size_override("font_size", font_size)
 
 
 func _refresh_building_positions() -> void:
 	for child in buildings_root.get_children():
 		var building := child as Building
 		if building != null:
-			building.global_position = grid_manager.grid_to_world(building.grid_position)
+			grid_manager.refresh_piece_transform(building)
 
 
 func _refresh_medal_progress() -> void:

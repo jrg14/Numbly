@@ -23,7 +23,15 @@ func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bo
 	if from_building == null:
 		return can_accept_packet(packet)
 
-	var incoming_direction: Vector2i = from_building.grid_position - grid_position
+	var incoming_direction := _get_incoming_direction(from_building)
+	return can_accept_packet(packet) and incoming_direction != facing
+
+
+func can_accept_packet_from_cell(packet: NumberPacket, from_building: Building, target_cell: Vector2i) -> bool:
+	if from_building == null:
+		return can_accept_packet(packet)
+
+	var incoming_direction := _get_incoming_direction(from_building, target_cell)
 	return can_accept_packet(packet) and incoming_direction != facing
 
 
@@ -158,3 +166,11 @@ func _normalize_cardinal(direction: Vector2i, fallback: Vector2i) -> Vector2i:
 		return Vector2i.RIGHT if direction.x > 0 else Vector2i.LEFT
 
 	return Vector2i.DOWN if direction.y > 0 else Vector2i.UP
+
+
+func _get_incoming_direction(from_building: Building, target_cell: Vector2i = Vector2i(-9999, -9999)) -> Vector2i:
+	if target_cell.x < -9000:
+		target_cell = grid_position
+
+	var origin_cell := from_building.get_nearest_occupied_cell_to(target_cell)
+	return _normalize_cardinal(origin_cell - target_cell, input_direction)

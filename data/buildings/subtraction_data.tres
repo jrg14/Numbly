@@ -11,6 +11,7 @@ description = "Resta entradas en orden de llegada."
 building_type = 5
 scene = ExtResource("2_subtraction_scene")
 cost = 4
+footprint_size = Vector2i(2, 2)
 input_count = 2
 output_count = 1
 tick_interval = 0.0

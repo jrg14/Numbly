@@ -14,21 +14,21 @@
 [sub_resource type="Resource" id="LevelBuildingData_source_2"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 2)
+cell = Vector2i(0, 4)
 locked = true
 generated_value = 2
 
 [sub_resource type="Resource" id="LevelBuildingData_source_3"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("2_source_data")
-cell = Vector2i(0, 4)
+cell = Vector2i(0, 8)
 locked = true
 generated_value = 3
 
 [sub_resource type="Resource" id="LevelBuildingData_output_5"]
 script = ExtResource("6_level_building_data")
 building_data = ExtResource("4_output_data")
-cell = Vector2i(7, 3)
+cell = Vector2i(14, 6)
 locked = true
 target_value = 5
 
@@ -104,6 +104,7 @@ script = ExtResource("1_level_data")
 id = &"level_001"
 display_name = "Primer circuito"
 objective_text = "Combina 2 y 3 para producir 5."
+grid_size = Vector2i(16, 16)
 initial_buildings = Array[ExtResource("6_level_building_data")]([SubResource("LevelBuildingData_source_2"), SubResource("LevelBuildingData_source_3"), SubResource("LevelBuildingData_output_5")])
 allowed_buildings = Array[ExtResource("1_hf4on")]([ExtResource("5_conveyor_data"), ExtResource("3_adder_data")])
 objectives = Array[ExtResource("7_objective_data")]([SubResource("ObjectiveData_target_5"), SubResource("ObjectiveData_machine_limit"), SubResource("ObjectiveData_time_limit"), SubResource("ObjectiveData_budget_limit")])

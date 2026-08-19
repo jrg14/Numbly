@@ -352,10 +352,9 @@ Al seleccionar un edificio, mostrar entradas y salidas relevantes.
 
 Estado actual:
 
-- implementada una primera versión de vista de rutas por hover y preview;
-- falta selección persistente de edificios colocados;
-- falta integrar motivos detallados de bloqueo en la propia vista;
-- falta pulir la presentación visual tras probarla en juego.
+- retirada de la escena de juego como ayuda direccional activa;
+- la prioridad actual es que los sprites comuniquen entradas y salidas por sí mismos;
+- los operadores aritméticos ya muestran `A`, `B` y la fórmula de salida en el propio edificio.
 
 Ideas:
 

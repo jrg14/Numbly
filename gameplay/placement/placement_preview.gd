@@ -11,10 +11,15 @@ var is_valid_position: bool = false:
 		is_valid_position = value
 		queue_redraw()
 
+var footprint_size: Vector2i = Vector2i(1, 1):
+	set(value):
+		footprint_size = Vector2i(maxi(value.x, 1), maxi(value.y, 1))
+		queue_redraw()
 
-func show_at(world_position: Vector2, valid_position: bool, rotation_degrees_value: float) -> void:
+func show_at(world_position: Vector2, valid_position: bool, rotation_degrees_value: float, preview_footprint_size: Vector2i = Vector2i(1, 1)) -> void:
 	global_position = world_position
 	rotation_degrees = rotation_degrees_value
+	footprint_size = preview_footprint_size
 	is_valid_position = valid_position
 	visible = true
 
@@ -24,11 +29,12 @@ func hide_preview() -> void:
 
 
 func _draw() -> void:
-	var half_size := cell_size * 0.5
-	var rect := Rect2(-half_size, cell_size)
+	var preview_size := cell_size * Vector2(footprint_size)
+	var half_size := preview_size * 0.5
+	var rect := Rect2(-half_size, preview_size)
 	var fill_color := Color(0.2, 0.85, 0.45, 0.22) if is_valid_position else Color(0.95, 0.2, 0.18, 0.22)
 	var outline_color := Color(0.2, 0.85, 0.45, 0.85) if is_valid_position else Color(0.95, 0.2, 0.18, 0.85)
 
 	draw_rect(rect, fill_color, true)
 	draw_rect(rect, outline_color, false, 3.0)
-	draw_line(Vector2.ZERO, Vector2(cell_size.x * 0.32, 0.0), outline_color, 4.0)
+	draw_line(Vector2.ZERO, Vector2(preview_size.x * 0.32, 0.0), outline_color, 4.0)

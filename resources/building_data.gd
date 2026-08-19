@@ -24,6 +24,9 @@ enum BuildingType {
 @export var scene: PackedScene
 @export var icon: Texture2D
 @export var cost: int = 0
+@export var footprint_size: Vector2i = Vector2i(1, 1):
+	set(value):
+		footprint_size = Vector2i(maxi(value.x, 1), maxi(value.y, 1))
 @export var input_count: int = 0
 @export var output_count: int = 0
 @export var tick_interval: float = 1.0

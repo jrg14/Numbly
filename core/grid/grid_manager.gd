@@ -16,6 +16,7 @@ signal grid_cleared
 @export var cell_size: Vector2 = Vector2(64, 64):
 	set(value):
 		cell_size = Vector2(maxf(value.x, 1.0), maxf(value.y, 1.0))
+		_refresh_occupant_transforms()
 		queue_redraw()
 
 @export var origin: Vector2 = Vector2.ZERO:
@@ -40,6 +41,10 @@ func world_to_grid(world_position: Vector2) -> Vector2i:
 
 func grid_to_world(cell: Vector2i) -> Vector2:
 	return to_global(GridUtils.grid_to_local_center(cell, cell_size, origin))
+
+
+func grid_to_world_for_footprint(cell: Vector2i, footprint_size: Vector2i) -> Vector2:
+	return to_global(GridUtils.grid_to_local_footprint_center(cell, footprint_size, cell_size, origin))
 
 
 func grid_to_local_top_left(cell: Vector2i) -> Vector2:
@@ -81,6 +86,19 @@ func mark_cell_occupied(cell: Vector2i, occupant: Node2D) -> bool:
 	return true
 
 
+func mark_footprint_occupied(cell: Vector2i, footprint_size: Vector2i, occupant: Node2D) -> bool:
+	if not can_place_piece(cell, footprint_size) or occupant == null:
+		return false
+
+	for footprint_cell in get_footprint_cells(cell, footprint_size):
+		var grid_cell := get_cell(footprint_cell)
+		grid_cell.occupant = occupant
+		cell_occupied.emit(footprint_cell, occupant)
+
+	queue_redraw()
+	return true
+
+
 func clear_cell(cell: Vector2i) -> Node2D:
 	var grid_cell := get_cell(cell)
 	if grid_cell == null:
@@ -93,12 +111,20 @@ func clear_cell(cell: Vector2i) -> Node2D:
 	return previous_occupant
 
 
-func can_place_piece(cell: Vector2i) -> bool:
-	return is_in_bounds(cell) and not is_cell_occupied(cell)
+func can_place_piece(cell: Vector2i, footprint_size: Vector2i = Vector2i(1, 1)) -> bool:
+	for footprint_cell in get_footprint_cells(cell, footprint_size):
+		if not is_in_bounds(footprint_cell) or is_cell_occupied(footprint_cell):
+			return false
+
+	return true
 
 
 func place_piece(piece: Node2D, cell: Vector2i, piece_parent: Node = null) -> bool:
-	if piece == null or not can_place_piece(cell):
+	if piece == null:
+		return false
+
+	var footprint_size := _get_piece_footprint_size(piece)
+	if not can_place_piece(cell, footprint_size):
 		return false
 
 	var parent := piece_parent if piece_parent != null else self
@@ -107,12 +133,12 @@ func place_piece(piece: Node2D, cell: Vector2i, piece_parent: Node = null) -> bo
 	elif piece.get_parent() != parent:
 		piece.reparent(parent)
 
-	piece.global_position = grid_to_world(cell)
-
 	if piece is Building:
 		piece.grid_position = cell
 
-	mark_cell_occupied(cell, piece)
+	refresh_piece_transform(piece)
+
+	mark_footprint_occupied(cell, footprint_size, piece)
 	piece_placed.emit(piece, cell)
 	return true
 
@@ -121,10 +147,11 @@ func remove_piece_at(cell: Vector2i, free_piece: bool = true) -> Node2D:
 	if not is_in_bounds(cell):
 		return null
 
-	var occupant := clear_cell(cell)
+	var occupant := get_occupant(cell)
 	if occupant == null:
 		return null
 
+	_clear_occupant_cells(occupant)
 	piece_removed.emit(occupant, cell)
 
 	if is_instance_valid(occupant):
@@ -157,6 +184,31 @@ func get_neighbors(cell: Vector2i, include_diagonals: bool = false) -> Array[Vec
 	return valid_neighbors
 
 
+func get_footprint_cells(cell: Vector2i, footprint_size: Vector2i) -> Array[Vector2i]:
+	var safe_footprint_size := Vector2i(maxi(footprint_size.x, 1), maxi(footprint_size.y, 1))
+	var cells: Array[Vector2i] = []
+
+	for y in range(safe_footprint_size.y):
+		for x in range(safe_footprint_size.x):
+			cells.append(cell + Vector2i(x, y))
+
+	return cells
+
+
+func refresh_piece_transform(piece: Node2D) -> void:
+	if piece == null or not is_instance_valid(piece):
+		return
+
+	var footprint_size := _get_piece_footprint_size(piece)
+	var cell := Vector2i.ZERO
+	var building := piece as Building
+	if building != null:
+		cell = building.grid_position
+
+	piece.global_position = grid_to_world_for_footprint(cell, footprint_size)
+	_apply_piece_visual_scale(piece, footprint_size)
+
+
 func _draw() -> void:
 	if not draw_grid:
 		return
@@ -183,3 +235,40 @@ func _initialize_cells() -> void:
 		for x in range(grid_size.x):
 			var cell := Vector2i(x, y)
 			_cells[cell] = GridCell.new(cell)
+
+
+func _clear_occupant_cells(occupant: Node2D) -> void:
+	for cell in _cells.keys():
+		var grid_cell := _cells[cell] as GridCell
+		if grid_cell != null and grid_cell.occupant == occupant:
+			grid_cell.clear()
+			cell_cleared.emit(cell)
+
+	queue_redraw()
+
+
+func _get_piece_footprint_size(piece: Node2D) -> Vector2i:
+	var building := piece as Building
+	if building == null:
+		return Vector2i(1, 1)
+
+	return building.footprint_size
+
+
+func _apply_piece_visual_scale(piece: Node2D, footprint_size: Vector2i) -> void:
+	var base_cell_size := 64.0
+	piece.scale = Vector2(
+		cell_size.x / base_cell_size * float(footprint_size.x),
+		cell_size.y / base_cell_size * float(footprint_size.y)
+	)
+
+
+func _refresh_occupant_transforms() -> void:
+	var refreshed: Dictionary = {}
+	for cell in _cells:
+		var occupant := get_occupant(cell) as Node2D
+		if occupant == null or refreshed.has(occupant):
+			continue
+
+		refresh_piece_transform(occupant)
+		refreshed[occupant] = true

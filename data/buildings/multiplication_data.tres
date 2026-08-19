@@ -11,6 +11,7 @@ description = "Consume dos paquetes numericos y emite el producto."
 building_type = 4
 scene = ExtResource("2_multiplication_scene")
 cost = 5
+footprint_size = Vector2i(2, 2)
 input_count = 2
 output_count = 1
 tick_interval = 0.0

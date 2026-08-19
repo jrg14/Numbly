@@ -84,7 +84,7 @@ Los edificios iniciales usan `LevelBuildingData`. Esto permite configurar por ni
 - tamaño de buffer;
 - intervalo de operación.
 
-Los niveles actuales van de `level_001.tres` a `level_015.tres`.
+Los niveles actuales van de `level_001.tres` a `level_025.tres`.
 
 ## Construcción
 
@@ -144,12 +144,18 @@ El grid:
 - convierte posiciones entre mundo y celda;
 - comprueba si una celda está dentro de límites;
 - comprueba si una celda está ocupada;
-- coloca piezas centradas en una celda;
-- registra el ocupante de cada celda;
+- coloca piezas centradas en el footprint que ocupan;
+- registra el mismo ocupante en cada celda cubierta por su footprint;
 - elimina piezas;
 - dibuja líneas de grid y celdas ocupadas.
 
-Cada edificio colocado en el grid guarda su `grid_position`.
+Cada edificio colocado en el grid guarda su `grid_position`, que representa la esquina superior izquierda de su footprint.
+
+El tamaño de footprint vive en `BuildingData.footprint_size` y se copia al edificio instanciado. En los datos actuales:
+
+- fuentes y operadores aritméticos usan `2x2`;
+- conveyors y outputs se mantienen en `1x1`;
+- el grid de los niveles se ha duplicado para conservar espacio jugable alrededor de los footprints nuevos.
 
 ## Simulación
 
@@ -184,14 +190,16 @@ Cuando un edificio emite un paquete, `SimulationManager` decide a donde va.
 
 Comportamiento actual:
 
-- si el edificio emisor es `SourceBuilding`, intenta enviar una copia del paquete a derecha, abajo, izquierda y arriba;
-- si una dirección no tiene edificio receptor, la fuente simplemente la ignora;
-- si el emisor no es una fuente, envía el paquete hacia su dirección `facing`;
-- si no hay receptor en esa celda, se emite `connection_error` y `packet_blocked`;
+- si el edificio emisor es `SourceBuilding`, intenta enviar una copia del paquete por cada celda de perímetro de su footprint;
+- una fuente `2x2` tiene 8 celdas de salida potenciales: 2 arriba, 2 a la derecha, 2 abajo y 2 a la izquierda;
+- si una celda de salida de fuente no tiene receptor, la fuente simplemente la ignora;
+- si el emisor no es una fuente, envía el paquete a sus grupos de salida;
+- una salida combinada puede probar varias celdas destino, pero consume un único paquete lógico;
+- si no hay receptor en ninguna celda destino del grupo, se emite `connection_error` y `packet_blocked`;
 - si hay receptor pero rechaza el paquete, también se emite error y bloqueo;
 - si el receptor acepta, se emite `packet_transferred`.
 
-Esto significa que las fuentes funcionan como emisores omnidireccionales hacia vecinos inmediatos ocupados, mientras que conveyors y operadores tienen salida direccional.
+Esto significa que las fuentes funcionan como emisores omnidireccionales por celda de borde, mientras que conveyors y operadores tienen salidas direccionales o grupos de salida definidos por su footprint.
 
 ## Edificios
 
@@ -201,10 +209,12 @@ La clase base define:
 
 - `building_data`;
 - `grid_position`;
+- `footprint_size`;
 - `facing`;
 - `locked`;
 - señales de salida, aceptación y rechazo de paquetes;
-- API común para aceptar paquetes;
+- API común para aceptar paquetes por edificio o por celda concreta;
+- helpers para celdas ocupadas, perímetro y grupos de salida;
 - rotación en pasos de 90 grados;
 - emisión de paquetes.
 
@@ -218,6 +228,8 @@ La fuente:
 
 - tiene un `generated_value`;
 - genera un paquete cada `generation_interval_ticks`;
+- ocupa `2x2` en los datos actuales;
+- emite una copia independiente hacia cada una de las 8 celdas adyacentes a sus lados;
 - no acepta paquetes entrantes;
 - configura su valor desde `LevelBuildingData`;
 - muestra el valor en `ValueLabel`.
@@ -246,13 +258,14 @@ Script: `gameplay/buildings/addition/addition_building.gd`
 
 El sumador:
 
+- ocupa `2x2` en los datos actuales;
 - espera `input_count` entradas distintas;
-- usa una cola por dirección de entrada;
+- usa una cola por casilla física de entrada;
+- diferencia entrada A y entrada B según la celda por la que entra el paquete;
 - acepta paquetes mientras el total en buffers sea menor que `max_buffer_size`;
-- solo acepta nuevas direcciones mientras no se supere `input_count`;
 - cuando tiene al menos un paquete en cada entrada requerida, consume uno de cada buffer;
 - suma los valores;
-- emite un nuevo `NumberPacket` con el resultado;
+- emite un nuevo `NumberPacket` con el resultado por una salida combinada;
 - espera `operation_interval_ticks` antes de poder emitir otra suma.
 
 Por defecto `input_count` es `2`, así que un `Addition` combina dos flujos. Para sumar tres o más fuentes, los niveles actuales encadenan varios `Addition`.
@@ -271,12 +284,13 @@ Estos operadores comparten la base `ArithmeticOperatorBuilding`.
 Comportamiento comun:
 
 - aceptan varias entradas hasta `input_count`;
-- guardan paquetes por carril de entrada;
+- guardan paquetes por casilla física de entrada;
+- la entrada A siempre se consume antes que B;
 - cuando hay un paquete por entrada requerida, consumen uno de cada carril;
-- emiten el resultado hacia `facing`;
+- emiten el resultado hacia un grupo de salida combinado en el lado `facing`;
 - respetan `max_buffer_size` y `operation_interval_ticks`.
 
-La resta, division y modulo usan el orden de llegada de carriles como orden de operacion. `Division` y `Modulo` rechazan divisores `0`.
+La resta, division y modulo usan el orden A y B como orden de operacion. Así `5 - 3` y `3 - 5` producen resultados distintos de forma estable. `Division` y `Modulo` rechazan divisores `0` en la entrada B.
 
 ### Splitter
 
@@ -333,21 +347,19 @@ Actualmente se visualiza:
 
 También se actualiza `status_label` con mensajes como transferencia, bloqueo, error o completado.
 
-## Vista de rutas
+## Lectura de puertos
 
-La vista de rutas está implementada con `gameplay/placement/route_overlay.gd`.
+La ayuda direccional por hover ya no está activa en la escena de juego. `Game` no instancia ni conecta `RouteOverlay`, de modo que la construcción no muestra flechas externas para explicar entradas y salidas.
 
-Comportamiento actual:
+La lectura principal vive en el sprite del edificio:
 
-- al pasar el cursor sobre un edificio colocado, se resaltan sus entradas y salidas;
-- al pasar el cursor sobre una celda libre con un edificio seleccionable, se muestran las rutas previstas de la preview;
-- las flechas verdes indican salidas;
-- las flechas azules indican entradas;
-- las marcas tenues indican conexiones potenciales sin vecino conectado;
-- las marcas rojas indican vecino ocupado pero conexión no válida;
-- la vista se oculta al salir del grid o cuando la entrada de construcción está deshabilitada.
+- los operadores aritméticos son amarillos;
+- en orientación base, `B` está en la celda superior izquierda;
+- `A` está en la celda superior derecha;
+- la fórmula inferior (`A+B`, `A-B`, `AxB`, `A/B`, `A%B`) marca la salida combinada;
+- al rotar el edificio, el sprite gira junto con los puertos lógicos.
 
-La primera versión no crea un estado persistente de selección de edificios colocados. Usa el hover actual del `PlacementController`, porque el juego todavía no tiene una acción separada de seleccionar una máquina existente.
+Esto mantiene visible el orden de operaciones no conmutativas sin depender de una capa de ayuda adicional.
 
 ## Objetivos
 

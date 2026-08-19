@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bvxh78vkfxeht"]
+[gd_scene load_steps=9 format=3 uid="uid://bvxh78vkfxeht"]
 
 [ext_resource type="Script" uid="uid://cqe874ifwb6fu" path="res://scenes/game/game.gd" id="1_game_script"]
 [ext_resource type="Script" uid="uid://cvrhb3je2wwb1" path="res://core/grid/grid_manager.gd" id="2_grid_manager"]
@@ -8,7 +8,6 @@
 [ext_resource type="Resource" uid="uid://bqy8ek5ur6wwg" path="res://data/levels/level_001.tres" id="6_level_001"]
 [ext_resource type="Script" uid="uid://c0pjas8tvnm5r" path="res://core/level/level_controller.gd" id="7_level_controller"]
 [ext_resource type="Script" uid="uid://6xuxd6fdadxd" path="res://core/simulation/packet_visualizer.gd" id="8_packet_visualizer"]
-[ext_resource type="Script" uid="uid://clcrh70emy2gg" path="res://gameplay/placement/route_overlay.gd" id="9_route_overlay"]
 
 [node name="Game" type="Node2D" unique_id=13690492]
 script = ExtResource("1_game_script")
@@ -17,18 +16,13 @@ current_level = ExtResource("6_level_001")
 [node name="GridManager" type="Node2D" parent="." unique_id=660713810]
 position = Vector2(96, 112)
 script = ExtResource("2_grid_manager")
-grid_size = Vector2i(10, 10)
+grid_size = Vector2i(20, 20)
 
 [node name="Buildings" type="Node2D" parent="." unique_id=1403444393]
 
 [node name="PacketVisuals" type="Node2D" parent="." unique_id=1000396547]
 z_index = 50
 script = ExtResource("8_packet_visualizer")
-
-[node name="RouteOverlay" type="Node2D" parent="." unique_id=76336446]
-z_index = 45
-script = ExtResource("9_route_overlay")
-grid_manager_path = NodePath("../GridManager")
 
 [node name="LevelController" type="Node" parent="." unique_id=365809654]
 script = ExtResource("7_level_controller")

@@ -210,14 +210,19 @@ func _place_level_building(level_building_data: LevelBuildingData, grid_manager:
 	if scene == null:
 		return false
 
-	if not grid_manager.can_place_piece(level_building_data.cell):
-		return false
-
 	var piece := scene.instantiate() as Node2D
 	if piece == null:
 		return false
 
 	_configure_level_piece(piece, level_building_data)
+	var footprint_size := Vector2i(1, 1)
+	var building := piece as Building
+	if building != null:
+		footprint_size = building.footprint_size
+
+	if not grid_manager.can_place_piece(level_building_data.cell, footprint_size):
+		return false
+
 	return grid_manager.place_piece(piece, level_building_data.cell, buildings_root)
 
 
@@ -226,7 +231,7 @@ func _configure_level_piece(piece: Node2D, level_building_data: LevelBuildingDat
 	if building == null:
 		return
 
-	building.building_data = level_building_data.building_data
+	building.apply_building_data(level_building_data.building_data)
 	building.locked = level_building_data.locked
 	building.set_rotation_steps(level_building_data.rotation_steps)
 

@@ -58,6 +58,9 @@ func _execute_remove() -> bool:
 	if target_piece != null and target_piece.locked:
 		return false
 
+	if target_piece != null:
+		cell = target_piece.grid_position
+
 	piece = grid_manager.remove_piece_at(cell, false)
 	return piece != null
 
@@ -84,6 +87,6 @@ func _apply_piece_setup(target_piece: Node2D) -> void:
 	if building == null:
 		return
 
-	building.building_data = building_data
+	building.apply_building_data(building_data)
 	building.locked = false
 	building.set_rotation_steps(rotation_steps)

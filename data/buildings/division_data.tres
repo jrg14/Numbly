@@ -11,6 +11,7 @@ description = "Divide entradas en orden de llegada. No acepta divisor cero."
 building_type = 6
 scene = ExtResource("2_division_scene")
 cost = 6
+footprint_size = Vector2i(2, 2)
 input_count = 2
 output_count = 1
 tick_interval = 0.0

@@ -26,7 +26,8 @@ func _populate_levels() -> void:
 
 		var button := Button.new()
 		var medal := SaveManager.get_level_medal(level_data.id)
-		button.custom_minimum_size = Vector2(0, 48)
+		button.custom_minimum_size = Vector2(0, 60)
+		button.add_theme_font_size_override("font_size", 19)
 		button.text = "%s  %s - %s" % [
 			LevelMedalData.get_medal_badge(medal),
 			level_data.id,
