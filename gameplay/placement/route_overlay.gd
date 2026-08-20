@@ -312,7 +312,7 @@ func _get_output_state_for_cell(target_cell: Vector2i) -> StringName:
 	if target is SourceBuilding:
 		return &"blocked"
 
-	if target.can_accept_packet(NumberPacket.new()):
+	if _preview_can_feed_target(target, target_cell):
 		return &"connected"
 
 	return &"blocked"
@@ -347,19 +347,44 @@ func _can_focused_building_feed(target: Building, direction_to_target: Vector2i)
 	if target is SourceBuilding:
 		return false
 
-	if target is OutputBuilding or target is ArithmeticOperatorBuilding:
-		return true
+	if target is OutputBuilding:
+		return target.can_accept_packet(NumberPacket.new())
+
+	if target is ArithmeticOperatorBuilding:
+		return target.can_accept_packet_from_cell(NumberPacket.new(), _building, target.grid_position)
 
 	if target is ConveyorBuilding:
-		return (target as ConveyorBuilding).facing != -direction_to_target
+		return (target as ConveyorBuilding).facing != -direction_to_target \
+			and target.can_accept_packet_from_cell(NumberPacket.new(), _building, target.grid_position)
 
 	if target is SplitterBuilding or target is FilterBuilding:
-		return not _get_route_output_directions(target).has(-direction_to_target)
+		return not _get_route_output_directions(target).has(-direction_to_target) \
+			and target.can_accept_packet_from_cell(NumberPacket.new(), _building, target.grid_position)
 
 	if target is BufferBuilding or target is GateBuilding:
-		return -direction_to_target != target.facing
+		return -direction_to_target != target.facing \
+			and target.can_accept_packet_from_cell(NumberPacket.new(), _building, target.grid_position)
 
 	return target.can_accept_packet(NumberPacket.new())
+
+
+func _preview_can_feed_target(target: Building, target_cell: Vector2i) -> bool:
+	var packet := NumberPacket.new()
+	if _building_data == null:
+		return target.can_accept_packet(packet)
+
+	if target is SourceBuilding:
+		return false
+
+	if _building_data.building_type == BuildingData.BuildingType.SOURCE:
+		return not (target is SourceBuilding) and target.can_accept_packet(packet)
+
+	if target is ConveyorBuilding:
+		var direction_to_target := target_cell - _cell
+		return (target as ConveyorBuilding).facing != -direction_to_target \
+			and target.can_accept_packet(packet)
+
+	return target.can_accept_packet_from_cell(packet, null, target_cell)
 
 
 func _can_neighbor_feed_focus(neighbor: Building, direction_to_neighbor: Vector2i) -> bool:

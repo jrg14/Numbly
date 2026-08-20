@@ -2,21 +2,41 @@ extends Building
 class_name ConveyorBuilding
 
 @export var travel_time: float = 0.25
+@export_range(1, 12, 1) var max_packet_capacity: int = 4
 @export var input_direction: Vector2i = Vector2i.LEFT:
 	set(value):
 		input_direction = _normalize_cardinal(value, Vector2i.LEFT)
 		queue_redraw()
 
-@export var belt_color: Color = Color(0.16, 0.17, 0.16, 1.0)
-@export var belt_edge_color: Color = Color(0.92, 0.36, 0.05, 1.0)
+@export var belt_color: Color = Color(0.13, 0.15, 0.15, 1.0)
+@export var belt_edge_color: Color = Color(0.98, 0.58, 0.12, 1.0)
 @export var belt_shadow_color: Color = Color(0.05, 0.06, 0.06, 1.0)
-@export var arrow_color: Color = Color(0.25, 0.26, 0.25, 0.75)
+@export var flow_mark_color: Color = Color(1.0, 0.84, 0.34, 0.9)
+@export var packet_color: Color = Color(0.95, 0.96, 0.78, 1.0)
+@export var connected_input_color: Color = Color(0.2, 0.72, 1.0, 0.95)
+@export var connected_output_color: Color = Color(0.24, 0.94, 0.48, 0.95)
+@export var open_port_color: Color = Color(0.78, 0.82, 0.86, 0.72)
+@export var blocked_color: Color = Color(1.0, 0.27, 0.2, 0.95)
 
 var _queued_packets: Array[Dictionary] = []
+var _flow_phase: float = 0.0
+var _has_connected_input: bool = false
+var _has_connected_output: bool = false
+
+
+func apply_building_data(data: BuildingData) -> void:
+	super.apply_building_data(data)
+	if building_data != null:
+		travel_time = maxf(building_data.tick_interval, 0.0)
+
+
+func _process(delta: float) -> void:
+	_flow_phase = fmod(_flow_phase + delta * 58.0, 18.0)
+	queue_redraw()
 
 
 func can_accept_packet(_packet: NumberPacket) -> bool:
-	return true
+	return _queued_packets.size() < max_packet_capacity
 
 
 func can_accept_packet_from(packet: NumberPacket, from_building: Building) -> bool:
@@ -51,6 +71,12 @@ func configure_route(new_input_direction: Vector2i, new_output_direction: Vector
 	input_direction = _normalize_cardinal(new_input_direction, -facing)
 	facing = _normalize_cardinal(new_output_direction, facing)
 	rotation_degrees = 0.0
+	queue_redraw()
+
+
+func set_connection_state(has_input: bool, has_output: bool) -> void:
+	_has_connected_input = has_input
+	_has_connected_output = has_output
 	queue_redraw()
 
 
@@ -101,8 +127,10 @@ func _draw() -> void:
 	if path_points.size() == 3:
 		draw_circle(Vector2.ZERO, 13.0, belt_color)
 
-	_draw_motion_arrows(path_points)
-	_draw_edge_clips(path_points)
+	_draw_flow_marks(path_points)
+	_draw_capacity_meter()
+	_draw_queued_packets(path_points)
+	_draw_port_markers(path_points)
 
 
 func _get_path_points() -> Array[Vector2]:
@@ -115,43 +143,124 @@ func _get_path_points() -> Array[Vector2]:
 	return [input_point, Vector2.ZERO, output_point]
 
 
-func _draw_motion_arrows(path_points: Array[Vector2]) -> void:
-	if path_points.size() < 2:
-		return
-
+func _draw_flow_marks(path_points: Array[Vector2]) -> void:
 	for i in range(path_points.size() - 1):
 		var start: Vector2 = path_points[i]
 		var end: Vector2 = path_points[i + 1]
-		var direction: Vector2 = (end - start).normalized()
-		var center: Vector2 = start.lerp(end, 0.58)
-		var side: Vector2 = Vector2(-direction.y, direction.x)
-		var arrow := PackedVector2Array([
-			center + direction * 9.0,
-			center - direction * 8.0 + side * 7.0,
-			center - direction * 8.0 - side * 7.0,
-		])
-		draw_colored_polygon(arrow, arrow_color)
+		var segment := end - start
+		var segment_length := segment.length()
+		if segment_length <= 0.01:
+			continue
+
+		var direction := segment / segment_length
+		var side := Vector2(-direction.y, direction.x)
+		var distance := 8.0 + _flow_phase
+		while distance < segment_length - 5.0:
+			var center := start + direction * distance
+			var mark := PackedVector2Array([
+				center + direction * 5.5,
+				center + side * 4.0,
+				center - direction * 5.5,
+				center - side * 4.0,
+			])
+			draw_colored_polygon(mark, flow_mark_color)
+			distance += 18.0
 
 
-func _draw_edge_clips(path_points: Array[Vector2]) -> void:
+func _draw_capacity_meter() -> void:
+	if max_packet_capacity <= 1:
+		return
+
+	var fill_ratio := clampf(float(_queued_packets.size()) / float(max_packet_capacity), 0.0, 1.0)
+	var track := Rect2(Vector2(-24.0, 23.0), Vector2(48.0, 4.0))
+	var fill := Rect2(track.position, Vector2(track.size.x * fill_ratio, track.size.y))
+	var color := blocked_color if _queued_packets.size() >= max_packet_capacity else connected_output_color
+	draw_rect(track, Color(0.02, 0.025, 0.03, 0.5), true)
+	draw_rect(fill, color, true)
+
+
+func _draw_queued_packets(path_points: Array[Vector2]) -> void:
+	var safe_travel_time := maxf(travel_time, 0.001)
+	for queued_packet in _queued_packets:
+		var packet := queued_packet.get("packet") as NumberPacket
+		if packet == null:
+			continue
+
+		var remaining_time: float = queued_packet.get("remaining_time", safe_travel_time)
+		var progress := clampf(1.0 - remaining_time / safe_travel_time, 0.06, 0.94)
+		var position := _sample_path(path_points, progress)
+		_draw_packet_badge(position, str(packet.value))
+
+
+func _draw_packet_badge(position: Vector2, text: String) -> void:
+	draw_circle(position + Vector2(1.5, 2.0), 12.0, Color(0.02, 0.025, 0.03, 0.72))
+	draw_circle(position, 12.0, packet_color)
+	draw_arc(position, 12.0, 0.0, TAU, 18, Color(0.05, 0.06, 0.06, 0.9), 2.0)
+
+	var font := ThemeDB.fallback_font
+	if font == null:
+		return
+
+	var font_size := 13
+	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var baseline := position + Vector2(-text_width * 0.5, 4.5)
+	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.06, 0.07, 0.08, 1.0))
+
+
+func _draw_port_markers(path_points: Array[Vector2]) -> void:
 	if path_points.is_empty():
 		return
 
-	var clip_color := Color(0.78, 0.82, 0.86, 1.0)
-	for point in path_points:
-		if point == Vector2.ZERO:
-			continue
+	_draw_port_marker(path_points.front(), input_direction, _has_connected_input, true)
+	_draw_port_marker(path_points.back(), facing, _has_connected_output, false)
 
-		var outward: Vector2 = point.normalized()
-		var tangent: Vector2 = Vector2(-outward.y, outward.x)
-		var clip_center: Vector2 = point - outward * 7.0
-		var clip_points := PackedVector2Array([
-			clip_center - tangent * 8.0 - outward * 3.0,
-			clip_center + tangent * 8.0 - outward * 3.0,
-			clip_center + tangent * 8.0 + outward * 3.0,
-			clip_center - tangent * 8.0 + outward * 3.0,
-		])
-		draw_colored_polygon(clip_points, clip_color)
+
+func _draw_port_marker(point: Vector2, direction: Vector2i, connected: bool, is_input: bool) -> void:
+	if point == Vector2.ZERO:
+		return
+
+	var outward: Vector2 = Vector2(direction).normalized()
+	var tangent := Vector2(-outward.y, outward.x)
+	var center := point - outward * 7.0
+	var color := connected_input_color if is_input else connected_output_color
+	if not connected:
+		color = open_port_color
+	if _queued_packets.size() >= max_packet_capacity and is_input:
+		color = blocked_color
+
+	var points := PackedVector2Array([
+		center - tangent * 8.0 - outward * 3.0,
+		center + tangent * 8.0 - outward * 3.0,
+		center + tangent * 8.0 + outward * 3.0,
+		center - tangent * 8.0 + outward * 3.0,
+	])
+	draw_colored_polygon(points, color)
+
+
+func _sample_path(path_points: Array[Vector2], progress: float) -> Vector2:
+	if path_points.size() == 0:
+		return Vector2.ZERO
+	if path_points.size() == 1:
+		return path_points[0]
+
+	var total_length := 0.0
+	for i in range(path_points.size() - 1):
+		total_length += path_points[i].distance_to(path_points[i + 1])
+
+	if total_length <= 0.01:
+		return path_points.back()
+
+	var target_distance := clampf(progress, 0.0, 1.0) * total_length
+	for i in range(path_points.size() - 1):
+		var start: Vector2 = path_points[i]
+		var end: Vector2 = path_points[i + 1]
+		var segment_length := start.distance_to(end)
+		if target_distance <= segment_length:
+			return start.lerp(end, target_distance / segment_length)
+
+		target_distance -= segment_length
+
+	return path_points.back()
 
 
 func _direction_to_edge(direction: Vector2i) -> Vector2:

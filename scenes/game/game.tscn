@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://bvxh78vkfxeht"]
+[gd_scene load_steps=10 format=3 uid="uid://bvxh78vkfxeht"]
 
 [ext_resource type="Script" uid="uid://cqe874ifwb6fu" path="res://scenes/game/game.gd" id="1_game_script"]
 [ext_resource type="Script" uid="uid://cvrhb3je2wwb1" path="res://core/grid/grid_manager.gd" id="2_grid_manager"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" uid="uid://bqy8ek5ur6wwg" path="res://data/levels/level_001.tres" id="6_level_001"]
 [ext_resource type="Script" uid="uid://c0pjas8tvnm5r" path="res://core/level/level_controller.gd" id="7_level_controller"]
 [ext_resource type="Script" uid="uid://6xuxd6fdadxd" path="res://core/simulation/packet_visualizer.gd" id="8_packet_visualizer"]
+[ext_resource type="Script" uid="uid://clcrh70emy2gg" path="res://gameplay/placement/route_overlay.gd" id="9_route_overlay"]
 
 [node name="Game" type="Node2D" unique_id=13690492]
 script = ExtResource("1_game_script")
@@ -31,10 +32,16 @@ script = ExtResource("7_level_controller")
 visible = false
 script = ExtResource("3_placement_preview")
 
+[node name="RouteOverlay" type="Node2D" parent="." unique_id=384281905]
+z_index = 40
+script = ExtResource("9_route_overlay")
+grid_manager_path = NodePath("../GridManager")
+
 [node name="PlacementController" type="Node" parent="." unique_id=143802461]
 script = ExtResource("4_placement_controller")
 grid_manager_path = NodePath("../GridManager")
 placement_preview_path = NodePath("../PlacementPreview")
+route_overlay_path = NodePath("../RouteOverlay")
 build_parent_path = NodePath("../Buildings")
 
 [node name="SimulationManager" type="Node" parent="." unique_id=1087015699]

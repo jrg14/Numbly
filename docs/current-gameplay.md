@@ -244,15 +244,17 @@ Script: `gameplay/buildings/conveyor/conveyor_building.gd`
 
 El conveyor:
 
-- acepta paquetes;
+- acepta paquetes mientras no supere `max_packet_capacity`;
 - rechaza paquetes que llegan desde su propia dirección de salida;
 - guarda paquetes en una cola interna;
 - espera `travel_time`;
+- sincroniza `travel_time` con `BuildingData.tick_interval`;
 - emite los paquetes listos hacia `facing`;
 - puede tener ruta recta o curva según `input_direction` y `facing`;
-- recalcula su dibujo cuando cambia la ruta.
+- muestra marcas de flujo animadas, paquetes en tránsito, capacidad y estado de entrada/salida;
+- recalcula su dibujo cuando cambia la ruta o su estado de conexión.
 
-Los conveyors pueden colocarse arrastrando. Durante el arrastre, el controlador intenta ajustar automáticamente entrada y salida para formar una ruta continua.
+Los conveyors pueden colocarse arrastrando. Durante el arrastre, el controlador pinta una ruta ortogonal celda a celda e intenta ajustar automáticamente entrada y salida para formar una ruta continua.
 
 ### Addition
 
@@ -351,19 +353,21 @@ También se actualiza `status_label` con mensajes como transferencia, bloqueo, e
 
 ## Lectura de puertos
 
-La ayuda direccional por hover ya no está activa en la escena de juego. `Game` no instancia ni conecta `RouteOverlay`, de modo que la construcción no muestra flechas externas para explicar entradas y salidas.
+La ayuda direccional por hover está activa en la escena de juego mediante `RouteOverlay`. Al pasar sobre una pieza o una previsualización, el overlay muestra entradas, salidas, conexiones posibles y bloqueos.
 
 La lectura principal vive en el sprite del edificio:
 
+- los conveyors muestran flujo animado, puertos abiertos/conectados y saturación;
 - los operadores aritméticos son amarillos;
 - en orientación base, `B` está en la celda superior izquierda;
 - `A` está en la celda superior derecha;
 - la mitad inferior no tiene divisor vertical y funciona como salida combinada;
 - la fórmula inferior (`A+B`, `A-B`, `AxB`, `A/B`, `A%B`) marca esa salida combinada;
-- al rotar el edificio, las posiciones de `A`, `B` y la fórmula giran junto con los puertos lógicos;
-- las etiquetas compensan su rotación para mantenerse legibles para el jugador.
+- al rotar un edificio, las posiciones de `A`, `B` y la fórmula giran junto con los puertos lógicos;
+- las etiquetas compensan su rotación para mantenerse legibles para el jugador;
+- el overlay complementa el sprite cuando hace falta leer una conexión antes de colocar.
 
-Esto mantiene visible el orden de operaciones no conmutativas sin depender de una capa de ayuda adicional.
+Esto mantiene visible el orden de operaciones no conmutativas y reduce la colocación por ensayo y error.
 
 ## Objetivos
 

@@ -140,11 +140,11 @@ func get_input_cells() -> Array[Vector2i]:
 	var input_cells: Array[Vector2i] = []
 
 	if facing == Vector2i.RIGHT:
-		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, footprint_size.y - 1))
-		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, 0))
-	elif facing == Vector2i.LEFT:
 		input_cells.append(grid_position)
 		input_cells.append(grid_position + Vector2i(0, footprint_size.y - 1))
+	elif facing == Vector2i.LEFT:
+		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, footprint_size.y - 1))
+		input_cells.append(grid_position + Vector2i(footprint_size.x - 1, 0))
 	elif facing == Vector2i.DOWN:
 		input_cells.append(grid_position + Vector2i(1, 0))
 		input_cells.append(grid_position)

@@ -11,6 +11,7 @@ signal layout_changed
 
 @export var grid_manager_path: NodePath
 @export var placement_preview_path: NodePath
+@export var route_overlay_path: NodePath
 @export var build_parent_path: NodePath
 @export var available_building_scenes: Array[PackedScene] = []
 @export var available_building_data: Array[BuildingData] = []
@@ -25,6 +26,7 @@ var erase_mode: bool = false
 
 var _grid_manager: GridManager
 var _placement_preview: PlacementPreview
+var _route_overlay: RouteOverlay
 var _build_parent: Node
 var _last_hovered_cell: Vector2i = Vector2i(-9999, -9999)
 var _is_drag_placing: bool = false
@@ -38,6 +40,7 @@ var _redo_stack: Array[BuildCommand] = []
 func _ready() -> void:
 	_grid_manager = get_node_or_null(grid_manager_path) as GridManager
 	_placement_preview = get_node_or_null(placement_preview_path) as PlacementPreview
+	_route_overlay = get_node_or_null(route_overlay_path) as RouteOverlay
 	_build_parent = get_node_or_null(build_parent_path)
 
 	if _grid_manager != null and _placement_preview != null:
@@ -56,6 +59,8 @@ func _process(_delta: float) -> void:
 		_stop_drag_removing()
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
+		if _route_overlay != null:
+			_route_overlay.hide_routes()
 		return
 
 	_update_preview(get_viewport().get_mouse_position())
@@ -213,6 +218,8 @@ func set_erase_mode(enabled: bool) -> void:
 
 	if _placement_preview != null:
 		_placement_preview.hide_preview()
+	if _route_overlay != null:
+		_route_overlay.hide_routes()
 
 	if not erase_mode:
 		_update_preview(get_viewport().get_mouse_position())
@@ -375,6 +382,8 @@ func _update_preview(screen_position: Vector2) -> void:
 	if erase_mode or _grid_manager == null or _placement_preview == null or selected_building_index == -1:
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
+		if _route_overlay != null:
+			_route_overlay.hide_routes()
 		return
 
 	var cell := _grid_manager.world_to_grid(_screen_to_world(screen_position))
@@ -382,11 +391,22 @@ func _update_preview(screen_position: Vector2) -> void:
 
 	if not _grid_manager.is_in_bounds(cell):
 		_placement_preview.hide_preview()
+		if _route_overlay != null:
+			_route_overlay.hide_routes()
 		return
 
 	var occupant := _grid_manager.get_occupant(cell) as Building
 	if occupant != null:
 		_placement_preview.hide_preview()
+		if _route_overlay != null:
+			_route_overlay.show_focus(
+				occupant.grid_position,
+				occupant,
+				occupant.building_data,
+				rotation_steps,
+				false,
+				true
+			)
 		return
 
 	var building_data := available_building_data[selected_building_index]
@@ -399,6 +419,9 @@ func _update_preview(screen_position: Vector2) -> void:
 		rotation_steps,
 		building_data
 	)
+
+	if _route_overlay != null:
+		_route_overlay.show_focus(cell, null, building_data, rotation_steps, true, can_place)
 
 
 func _screen_to_world(screen_position: Vector2) -> Vector2:
@@ -455,10 +478,16 @@ func _configure_drag_route(previous_cell: Vector2i, current_cell: Vector2i, dire
 	var current_conveyor := _get_conveyor_at(current_cell)
 	if current_conveyor != null:
 		current_conveyor.configure_route(-direction, direction)
+		current_conveyor.set_connection_state(previous_cell.x >= -9000, false)
 
 	var previous_conveyor := _get_conveyor_at(previous_cell)
 	if previous_conveyor != null:
 		previous_conveyor.configure_route(previous_conveyor.input_direction, direction)
+		previous_conveyor.set_connection_state(true, true)
+		_update_conveyor_route_at(previous_cell)
+
+	if current_conveyor != null:
+		_update_conveyor_route_at(current_cell)
 
 
 func _get_drag_cells_between(from_cell: Vector2i, to_cell: Vector2i) -> Array[Vector2i]:
@@ -468,21 +497,37 @@ func _get_drag_cells_between(from_cell: Vector2i, to_cell: Vector2i) -> Array[Ve
 		return cells
 
 	var delta: Vector2i = to_cell - from_cell
-	var steps: int = maxi(absi(delta.x), absi(delta.y))
-	if steps == 0:
+	if delta == Vector2i.ZERO:
 		cells.append(to_cell)
 		return cells
 
-	for i in range(1, steps + 1):
-		var t: float = float(i) / float(steps)
-		var cell: Vector2i = Vector2i(
-			roundi(lerpf(float(from_cell.x), float(to_cell.x), t)),
-			roundi(lerpf(float(from_cell.y), float(to_cell.y), t))
-		)
-		if cells.is_empty() or cells.back() != cell:
-			cells.append(cell)
+	var cursor := from_cell
+	if absi(delta.x) >= absi(delta.y):
+		_append_axis_drag_cells(cells, cursor, to_cell.x, true)
+		cursor = cells.back() if not cells.is_empty() else cursor
+		_append_axis_drag_cells(cells, cursor, to_cell.y, false)
+	else:
+		_append_axis_drag_cells(cells, cursor, to_cell.y, false)
+		cursor = cells.back() if not cells.is_empty() else cursor
+		_append_axis_drag_cells(cells, cursor, to_cell.x, true)
 
 	return cells
+
+
+func _append_axis_drag_cells(cells: Array[Vector2i], from_cell: Vector2i, target_axis_value: int, horizontal: bool) -> void:
+	var current_value := from_cell.x if horizontal else from_cell.y
+	var step := 1 if target_axis_value > current_value else -1
+
+	var cursor := from_cell
+	while current_value != target_axis_value:
+		current_value += step
+		if horizontal:
+			cursor.x = current_value
+		else:
+			cursor.y = current_value
+
+		if cells.is_empty() or cells.back() != cursor:
+			cells.append(cursor)
 
 
 func _get_primary_direction(from_cell: Vector2i, to_cell: Vector2i) -> Vector2i:
@@ -618,14 +663,26 @@ func _update_conveyor_route_at(cell: Vector2i) -> void:
 	var output_direction := _choose_output_direction(conveyor, output_options, input_options)
 	var input_direction := _choose_input_direction(conveyor, input_options, output_direction)
 	conveyor.configure_route(input_direction, output_direction)
+	conveyor.set_connection_state(input_options.has(input_direction), output_options.has(output_direction))
 
 
 func _choose_output_direction(conveyor: ConveyorBuilding, output_options: Array[Vector2i], input_options: Array[Vector2i]) -> Vector2i:
-	if output_options.has(conveyor.facing):
+	var current_output_neighbor := _get_building_at(conveyor.grid_position + conveyor.facing)
+	var has_operation_output := _has_operation_output_option(conveyor, output_options)
+	if output_options.has(conveyor.facing) \
+			and (not has_operation_output or not (current_output_neighbor is ConveyorBuilding)):
 		return conveyor.facing
 
 	for direction in output_options:
+		if direction != conveyor.input_direction and _is_operation_building(_get_building_at(conveyor.grid_position + direction)):
+			return direction
+
+	for direction in output_options:
 		if direction != conveyor.input_direction:
+			return direction
+
+	for direction in output_options:
+		if _is_operation_building(_get_building_at(conveyor.grid_position + direction)):
 			return direction
 
 	if output_options.size() > 0:
@@ -636,6 +693,18 @@ func _choose_output_direction(conveyor: ConveyorBuilding, output_options: Array[
 		fallback = -input_options[0]
 
 	return fallback
+
+
+func _has_operation_output_option(conveyor: ConveyorBuilding, output_options: Array[Vector2i]) -> bool:
+	for direction in output_options:
+		if _is_operation_building(_get_building_at(conveyor.grid_position + direction)):
+			return true
+
+	return false
+
+
+func _is_operation_building(building: Building) -> bool:
+	return building is ArithmeticOperatorBuilding
 
 
 func _choose_input_direction(conveyor: ConveyorBuilding, input_options: Array[Vector2i], output_direction: Vector2i) -> Vector2i:
