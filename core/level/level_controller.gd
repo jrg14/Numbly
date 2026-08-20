@@ -60,7 +60,7 @@ func get_player_building_count(buildings_root: Node) -> int:
 	var count := 0
 	for child in buildings_root.get_children():
 		var building := child as Building
-		if building != null and not building.locked:
+		if building != null and not building.locked and not (building is ConveyorBuilding):
 			count += 1
 
 	return count

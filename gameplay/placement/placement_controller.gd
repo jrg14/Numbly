@@ -152,12 +152,14 @@ func _place_selected_at(cell: Vector2i, placement_rotation_steps: int) -> bool:
 	if not input_enabled or _grid_manager == null or selected_building_index == -1:
 		return false
 
-	if max_placed_buildings > 0 and _get_placed_building_count() >= max_placed_buildings:
+	var building_data := available_building_data[selected_building_index]
+	if building_data == null or building_data.scene == null:
 		placement_failed.emit(cell)
 		return false
 
-	var building_data := available_building_data[selected_building_index]
-	if building_data == null or building_data.scene == null:
+	if max_placed_buildings > 0 \
+			and _building_data_counts_for_placement_limit(building_data) \
+			and _get_placed_building_count() >= max_placed_buildings:
 		placement_failed.emit(cell)
 		return false
 
@@ -616,10 +618,14 @@ func _get_placed_building_count() -> int:
 
 	for child in build_parent.get_children():
 		var building := child as Building
-		if building != null and not building.locked:
+		if building != null and not building.locked and not (building is ConveyorBuilding):
 			count += 1
 
 	return count
+
+
+func _building_data_counts_for_placement_limit(building_data: BuildingData) -> bool:
+	return building_data != null and building_data.building_type != BuildingData.BuildingType.CONVEYOR
 
 
 func _update_conveyor_routes_around(center_cell: Vector2i, footprint_size: Vector2i = Vector2i(1, 1)) -> void:

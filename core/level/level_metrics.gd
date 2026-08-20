@@ -53,7 +53,9 @@ func refresh_layout(buildings_root: Node) -> void:
 		if building == null or building.locked:
 			continue
 
-		placed_buildings += 1
+		if not (building is ConveyorBuilding):
+			placed_buildings += 1
+
 		if building.building_data != null:
 			spent_budget += building.building_data.cost
 

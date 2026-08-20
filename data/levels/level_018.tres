@@ -67,7 +67,7 @@ script = ExtResource("8_star_condition_data")
 stars = 2
 condition_type = 1
 limit = 12
-description = "Use 12 or fewer placed buildings."
+description = "Use 12 or fewer machines."
 
 [sub_resource type="Resource" id="StarTicks"]
 script = ExtResource("8_star_condition_data")

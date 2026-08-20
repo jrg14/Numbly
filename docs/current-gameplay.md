@@ -404,9 +404,9 @@ Puede usar:
 
 ### Machine limit
 
-Falla si el número de edificios colocados por el jugador supera `max_buildings`.
+Falla si el número de máquinas colocadas por el jugador supera `max_buildings`.
 
-Los edificios bloqueados del nivel no cuentan.
+Los edificios bloqueados del nivel no cuentan. Los `Conveyor` tampoco cuentan como máquinas para este objetivo ni para las medallas por número de edificios.
 
 ### Time limit
 
@@ -433,7 +433,7 @@ Se registran:
 
 - tick actual;
 - segundos transcurridos;
-- edificios colocados por el jugador;
+- máquinas colocadas por el jugador, excluyendo `Conveyor`;
 - presupuesto gastado;
 - paquetes consumidos por valor;
 - paquetes correctos por valor;
