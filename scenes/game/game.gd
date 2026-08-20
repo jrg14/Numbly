@@ -53,7 +53,7 @@ func _ready() -> void:
 	undo_button.pressed.connect(placement_controller.undo)
 	redo_button.pressed.connect(placement_controller.redo)
 	reset_button.pressed.connect(reset_level)
-	retry_button.pressed.connect(reset_level)
+	retry_button.pressed.connect(retry_level_attempt)
 	next_level_button.pressed.connect(_on_next_level_pressed)
 	main_menu_button.pressed.connect(Callable(SceneRouter, "go_to_main_menu"))
 	rotate_button.pressed.connect(placement_controller.rotate_clockwise)
@@ -124,6 +124,18 @@ func reset_level() -> void:
 		status_label.text = "Coloca edificios y pulsa Play."
 	else:
 		status_label.text = "Coloca edificios y pulsa Play. Medallas: %s" % medal_summary
+
+
+func retry_level_attempt() -> void:
+	_level_completed = false
+	_hide_completion_overlay()
+	packet_visualizer.clear_visuals()
+	simulation_manager.reset()
+	level_controller.reset_attempt_metrics(buildings_root)
+	placement_controller.set_erase_mode(false)
+	placement_controller.refresh_conveyor_routes()
+	_refresh_medal_progress()
+	status_label.text = "Intento reiniciado. Tu construccion se mantiene."
 
 
 func _on_packet_transferred(packet: NumberPacket, from_building: Building, to_building: Building) -> void:

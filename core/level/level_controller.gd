@@ -74,6 +74,20 @@ func refresh_layout_metrics(buildings_root: Node) -> void:
 	_update_objectives()
 
 
+func reset_attempt_metrics(buildings_root: Node) -> void:
+	if current_level == null:
+		return
+
+	metrics.reset()
+	metrics.refresh_layout(buildings_root)
+	for objective in objectives:
+		if objective != null:
+			objective.reset()
+			objective.update(metrics)
+
+	objectives_changed.emit(get_objectives_summary())
+
+
 func record_tick(tick_index: int, tick_delta: float, buildings_root: Node) -> void:
 	if current_level == null:
 		return
