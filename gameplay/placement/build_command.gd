@@ -4,6 +4,7 @@ class_name BuildCommand
 enum CommandType {
 	PLACE,
 	REMOVE,
+	ROTATE,
 }
 
 var command_type: CommandType = CommandType.PLACE
@@ -13,6 +14,7 @@ var building_data: BuildingData
 var scene: PackedScene
 var cell: Vector2i = Vector2i.ZERO
 var rotation_steps: int = 0
+var previous_rotation_steps: int = 0
 var piece: Node2D
 
 
@@ -22,6 +24,8 @@ func execute() -> bool:
 			return _execute_place()
 		CommandType.REMOVE:
 			return _execute_remove()
+		CommandType.ROTATE:
+			return _execute_rotate()
 
 	return false
 
@@ -32,6 +36,8 @@ func undo() -> bool:
 			return _undo_place()
 		CommandType.REMOVE:
 			return _undo_remove()
+		CommandType.ROTATE:
+			return _undo_rotate()
 
 	return false
 
@@ -80,6 +86,25 @@ func _undo_remove() -> bool:
 	return grid_manager.place_piece(piece, cell, build_parent)
 
 
+func _execute_rotate() -> bool:
+	var building := piece as Building
+	if building == null or building.locked:
+		return false
+
+	previous_rotation_steps = _get_piece_rotation_steps(building)
+	building.set_rotation_steps(rotation_steps)
+	return true
+
+
+func _undo_rotate() -> bool:
+	var building := piece as Building
+	if building == null or not is_instance_valid(building):
+		return false
+
+	building.set_rotation_steps(previous_rotation_steps)
+	return true
+
+
 func _apply_piece_setup(target_piece: Node2D) -> void:
 	target_piece.rotation_degrees = rotation_steps * 90.0
 
@@ -90,3 +115,23 @@ func _apply_piece_setup(target_piece: Node2D) -> void:
 	building.apply_building_data(building_data)
 	building.locked = false
 	building.set_rotation_steps(rotation_steps)
+
+
+func _get_piece_rotation_steps(building: Building) -> int:
+	if building is ConveyorBuilding:
+		return _get_conveyor_rotation_steps(building.facing)
+
+	return posmod(roundi(building.rotation_degrees / 90.0), 4)
+
+
+func _get_conveyor_rotation_steps(facing: Vector2i) -> int:
+	if facing == Vector2i.RIGHT:
+		return 0
+	if facing == Vector2i.DOWN:
+		return 1
+	if facing == Vector2i.LEFT:
+		return 2
+	if facing == Vector2i.UP:
+		return 3
+
+	return 0

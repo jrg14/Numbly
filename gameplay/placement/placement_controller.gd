@@ -8,6 +8,8 @@ signal rotation_changed(rotation_steps: int)
 signal erase_mode_changed(enabled: bool)
 signal history_changed(can_undo: bool, can_redo: bool)
 signal layout_changed
+signal edit_actions_requested(building: Building, screen_position: Vector2)
+signal edit_actions_cancelled
 
 @export var grid_manager_path: NodePath
 @export var placement_preview_path: NodePath
@@ -97,6 +99,8 @@ func select_building_index(index: int) -> void:
 	if index < 0 or index >= available_building_data.size():
 		return
 
+	edit_actions_cancelled.emit()
+
 	if selected_building_index != index:
 		rotation_steps = 0
 		rotation_changed.emit(rotation_steps)
@@ -116,6 +120,8 @@ func toggle_building_index(index: int) -> void:
 
 
 func clear_selected_building() -> void:
+	edit_actions_cancelled.emit()
+
 	if selected_building_index == -1:
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
@@ -159,6 +165,9 @@ func set_available_buildings(building_data_list: Array[BuildingData]) -> void:
 
 
 func rotate_clockwise() -> void:
+	if selected_building_index == -1:
+		return
+
 	rotation_steps = (rotation_steps + 1) % 4
 	rotation_changed.emit(rotation_steps)
 	_stop_drag_placing()
@@ -216,7 +225,7 @@ func remove_piece_at(cell: Vector2i) -> Node2D:
 		return null
 
 	var building := occupant as Building
-	if building != null and building.locked:
+	if building != null and not _is_editable_building(building):
 		placement_failed.emit(cell)
 		return null
 
@@ -230,6 +239,26 @@ func remove_piece_at(cell: Vector2i) -> Node2D:
 		return command.piece
 
 	return null
+
+
+func rotate_piece_at(cell: Vector2i) -> bool:
+	if not input_enabled or _grid_manager == null or not _grid_manager.is_in_bounds(cell):
+		return false
+
+	var building := _grid_manager.get_occupant(cell) as Building
+	if not _is_editable_building(building):
+		placement_failed.emit(cell)
+		return false
+
+	var command := BuildCommand.new()
+	command.command_type = BuildCommand.CommandType.ROTATE
+	command.grid_manager = _grid_manager
+	command.build_parent = _get_build_parent()
+	command.piece = building
+	command.cell = building.grid_position
+	command.rotation_steps = (_get_building_rotation_steps(building) + 1) % 4
+
+	return _execute_command(command)
 
 
 func set_erase_mode(enabled: bool) -> void:
@@ -362,6 +391,9 @@ func _handle_pointer_drag(screen_position: Vector2) -> void:
 
 
 func _begin_or_place_at_screen_position(screen_position: Vector2) -> void:
+	if _request_edit_actions_at_screen_position(screen_position):
+		return
+
 	if erase_mode:
 		_start_drag_removing()
 		_try_remove_at_screen_position(screen_position)
@@ -373,6 +405,7 @@ func _begin_or_place_at_screen_position(screen_position: Vector2) -> void:
 		return
 
 	if selected_building_index == -1:
+		edit_actions_cancelled.emit()
 		return
 
 	_try_place_at_screen_position(screen_position)
@@ -382,6 +415,7 @@ func _try_place_at_screen_position(screen_position: Vector2) -> void:
 	if _grid_manager == null:
 		return
 
+	edit_actions_cancelled.emit()
 	place_selected_at(_grid_manager.world_to_grid(_screen_to_world(screen_position)))
 
 
@@ -405,6 +439,7 @@ func _try_remove_at_screen_position(screen_position: Vector2) -> void:
 	if _grid_manager == null:
 		return
 
+	edit_actions_cancelled.emit()
 	remove_piece_at(_grid_manager.world_to_grid(_screen_to_world(screen_position)))
 
 
@@ -809,3 +844,64 @@ func _get_building_at(cell: Vector2i) -> Building:
 		return null
 
 	return _grid_manager.get_occupant(cell) as Building
+
+
+func _request_edit_actions_at_screen_position(screen_position: Vector2) -> bool:
+	if _grid_manager == null:
+		return false
+
+	var cell := _grid_manager.world_to_grid(_screen_to_world(screen_position))
+	if not _grid_manager.is_in_bounds(cell):
+		edit_actions_cancelled.emit()
+		return false
+
+	var building := _grid_manager.get_occupant(cell) as Building
+	if not _is_editable_building(building):
+		return false
+
+	clear_selected_building()
+	if _route_overlay != null:
+		_route_overlay.show_focus(
+			building.grid_position,
+			building,
+			building.building_data,
+			_get_building_rotation_steps(building),
+			false,
+			true
+		)
+
+	edit_actions_requested.emit(building, screen_position)
+	return true
+
+
+func _is_editable_building(building: Building) -> bool:
+	if building == null or building.locked:
+		return false
+
+	if building is SourceBuilding or building is OutputBuilding:
+		return false
+
+	return true
+
+
+func _get_building_rotation_steps(building: Building) -> int:
+	if building == null:
+		return 0
+
+	if building is ConveyorBuilding:
+		return _get_conveyor_rotation_steps(building.facing)
+
+	return posmod(roundi(building.rotation_degrees / 90.0), 4)
+
+
+func _get_conveyor_rotation_steps(facing: Vector2i) -> int:
+	if facing == Vector2i.RIGHT:
+		return 0
+	if facing == Vector2i.DOWN:
+		return 1
+	if facing == Vector2i.LEFT:
+		return 2
+	if facing == Vector2i.UP:
+		return 3
+
+	return 0

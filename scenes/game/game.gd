@@ -14,7 +14,6 @@ extends Node2D
 @onready var undo_button: Button = $UI/Controls/UndoButton
 @onready var redo_button: Button = $UI/Controls/RedoButton
 @onready var reset_button: Button = $UI/Controls/ResetButton
-@onready var rotate_button: Button = $UI/Controls/RotateButton
 @onready var medal_progress_label: Label = $UI/MedalProgressLabel
 @onready var status_label: Label = $UI/StatusLabel
 @onready var completion_overlay: Control = $UI/CompletionOverlay
@@ -29,7 +28,10 @@ var build_buttons: Array[Button] = []
 var _level_completed: bool = false
 var _build_palette_panel: PanelContainer
 var _build_palette: HBoxContainer
-var erase_button: Button
+var _edit_actions_panel: PanelContainer
+var _edit_actions_building: Building
+var _edit_rotate_button: Button
+var _edit_delete_button: Button
 
 
 func _ready() -> void:
@@ -42,8 +44,8 @@ func _ready() -> void:
 		$UI/Controls/BuildButton4,
 		$UI/Controls/BuildButton5,
 	]
-	_create_erase_button()
 	_create_build_palette()
+	_create_edit_actions_panel()
 	$UI.move_child(completion_overlay, $UI.get_child_count() - 1)
 	_configure_mobile_hud()
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
@@ -56,8 +58,6 @@ func _ready() -> void:
 	retry_button.pressed.connect(retry_level_attempt)
 	next_level_button.pressed.connect(_on_next_level_pressed)
 	main_menu_button.pressed.connect(Callable(SceneRouter, "go_to_main_menu"))
-	rotate_button.pressed.connect(placement_controller.rotate_clockwise)
-	erase_button.toggled.connect(_on_erase_button_toggled)
 
 	for i in range(build_buttons.size()):
 		build_buttons[i].pressed.connect(_on_build_button_pressed.bind(i))
@@ -68,7 +68,8 @@ func _ready() -> void:
 	level_controller.level_failed.connect(_on_level_failed)
 	placement_controller.placement_failed.connect(_on_placement_failed)
 	placement_controller.selected_building_changed.connect(_on_selected_building_changed)
-	placement_controller.erase_mode_changed.connect(_on_erase_mode_changed)
+	placement_controller.edit_actions_requested.connect(_on_edit_actions_requested)
+	placement_controller.edit_actions_cancelled.connect(_hide_edit_actions)
 	placement_controller.history_changed.connect(_on_history_changed)
 	placement_controller.layout_changed.connect(_on_layout_changed)
 	simulation_manager.simulation_started.connect(_refresh_play_pause_label)
@@ -105,6 +106,7 @@ func _on_simulation_tick_completed(tick: int, tick_delta: float) -> void:
 
 func reset_level() -> void:
 	_level_completed = false
+	_hide_edit_actions()
 	_hide_completion_overlay()
 	packet_visualizer.clear_visuals()
 	simulation_manager.reset()
@@ -129,6 +131,7 @@ func reset_level() -> void:
 
 func retry_level_attempt() -> void:
 	_level_completed = false
+	_hide_edit_actions()
 	_hide_completion_overlay()
 	packet_visualizer.clear_visuals()
 	simulation_manager.reset()
@@ -196,6 +199,7 @@ func _on_placement_failed(cell: Vector2i) -> void:
 
 
 func _on_layout_changed() -> void:
+	_hide_edit_actions()
 	_level_completed = false
 	simulation_manager.reset()
 	level_controller.refresh_layout_metrics(buildings_root)
@@ -287,14 +291,39 @@ func _create_build_palette() -> void:
 		button.reparent(_build_palette)
 
 
-func _create_erase_button() -> void:
-	erase_button = Button.new()
-	erase_button.name = "EraseButton"
-	_apply_mobile_button_style(erase_button, Vector2(92, 56), 18)
-	erase_button.toggle_mode = true
-	erase_button.text = "Borrar"
-	controls.add_child(erase_button)
-	controls.move_child(erase_button, rotate_button.get_index())
+func _create_edit_actions_panel() -> void:
+	_edit_actions_panel = PanelContainer.new()
+	_edit_actions_panel.name = "EditActionsPanel"
+	_edit_actions_panel.visible = false
+	_edit_actions_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	$UI.add_child(_edit_actions_panel)
+
+	var margin := MarginContainer.new()
+	margin.name = "Margin"
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	_edit_actions_panel.add_child(margin)
+
+	var actions := HBoxContainer.new()
+	actions.name = "Actions"
+	actions.add_theme_constant_override("separation", 8)
+	margin.add_child(actions)
+
+	_edit_rotate_button = Button.new()
+	_edit_rotate_button.name = "RotateButton"
+	_edit_rotate_button.text = "Rotar"
+	_apply_mobile_button_style(_edit_rotate_button, Vector2(104, 52), 18)
+	_edit_rotate_button.pressed.connect(_on_edit_rotate_pressed)
+	actions.add_child(_edit_rotate_button)
+
+	_edit_delete_button = Button.new()
+	_edit_delete_button.name = "DeleteButton"
+	_edit_delete_button.text = "Borrar"
+	_apply_mobile_button_style(_edit_delete_button, Vector2(104, 52), 18)
+	_edit_delete_button.pressed.connect(_on_edit_delete_pressed)
+	actions.add_child(_edit_delete_button)
 
 
 func _configure_mobile_hud() -> void:
@@ -311,7 +340,7 @@ func _configure_mobile_hud() -> void:
 	controls.alignment = BoxContainer.ALIGNMENT_CENTER
 	controls.add_theme_constant_override("separation", 8)
 
-	for button in [play_pause_button, menu_button, undo_button, redo_button, reset_button, erase_button, rotate_button]:
+	for button in [play_pause_button, menu_button, undo_button, redo_button, reset_button]:
 		if button != null:
 			_apply_mobile_button_style(button, Vector2(92, control_height), 18)
 
@@ -337,6 +366,9 @@ func _configure_mobile_hud() -> void:
 	if current_level != null:
 		_fit_board_to_viewport(current_level.grid_size)
 		_refresh_building_positions()
+
+	if _edit_actions_panel != null and _edit_actions_panel.visible:
+		_clamp_edit_actions_panel()
 
 
 func _fit_board_to_viewport(level_grid_size: Vector2i) -> void:
@@ -426,25 +458,57 @@ func _hide_completion_overlay() -> void:
 	placement_controller.input_enabled = true
 
 
-func _on_erase_button_toggled(enabled: bool) -> void:
-	placement_controller.set_erase_mode(enabled)
+func _on_edit_actions_requested(building: Building, screen_position: Vector2) -> void:
+	_edit_actions_building = building
+	_edit_actions_panel.visible = true
+	_edit_actions_panel.position = screen_position + Vector2(12, -68)
+	_clamp_edit_actions_panel()
+
+
+func _hide_edit_actions() -> void:
+	_edit_actions_building = null
+	if _edit_actions_panel != null:
+		_edit_actions_panel.visible = false
+
+
+func _on_edit_rotate_pressed() -> void:
+	if _edit_actions_building == null or not is_instance_valid(_edit_actions_building):
+		_hide_edit_actions()
+		return
+
+	var cell := _edit_actions_building.grid_position
+	_hide_edit_actions()
+	placement_controller.rotate_piece_at(cell)
+
+
+func _on_edit_delete_pressed() -> void:
+	if _edit_actions_building == null or not is_instance_valid(_edit_actions_building):
+		_hide_edit_actions()
+		return
+
+	var cell := _edit_actions_building.grid_position
+	_hide_edit_actions()
+	placement_controller.remove_piece_at(cell)
+
+
+func _clamp_edit_actions_panel() -> void:
+	if _edit_actions_panel == null:
+		return
+
+	var viewport_size := get_viewport_rect().size
+	var panel_size := _edit_actions_panel.size
+	if panel_size == Vector2.ZERO:
+		panel_size = _edit_actions_panel.get_combined_minimum_size()
+
+	_edit_actions_panel.position = Vector2(
+		clampf(_edit_actions_panel.position.x, 8.0, maxf(8.0, viewport_size.x - panel_size.x - 8.0)),
+		clampf(_edit_actions_panel.position.y, 8.0, maxf(8.0, viewport_size.y - panel_size.y - 8.0))
+	)
 
 
 func _on_selected_building_changed(index: int, _scene: PackedScene) -> void:
 	for i in range(build_buttons.size()):
 		build_buttons[i].set_pressed_no_signal(i == index)
-
-	rotate_button.disabled = index == -1
-
-
-func _on_erase_mode_changed(enabled: bool) -> void:
-	if erase_button != null:
-		erase_button.set_pressed_no_signal(enabled)
-
-	if enabled:
-		status_label.text = "Toca o arrastra sobre piezas para borrarlas."
-	else:
-		status_label.text = "Coloca edificios y pulsa Play."
 
 
 func _on_viewport_size_changed() -> void:

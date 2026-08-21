@@ -113,11 +113,6 @@ custom_minimum_size = Vector2(88, 40)
 layout_mode = 2
 text = "Build 5"
 
-[node name="RotateButton" type="Button" parent="UI/Controls" unique_id=432743959]
-custom_minimum_size = Vector2(88, 40)
-layout_mode = 2
-text = "Rotate"
-
 [node name="SelectedLabel" type="Label" parent="UI/Controls" unique_id=229760538]
 visible = false
 custom_minimum_size = Vector2(144, 40)
