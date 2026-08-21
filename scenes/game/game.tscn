@@ -14,6 +14,9 @@
 script = ExtResource("1_game_script")
 current_level = ExtResource("6_level_001")
 
+[node name="WorldCamera" type="Camera2D" parent="."]
+position = Vector2(320, 180)
+
 [node name="GridManager" type="Node2D" parent="." unique_id=660713810]
 position = Vector2(96, 112)
 script = ExtResource("2_grid_manager")

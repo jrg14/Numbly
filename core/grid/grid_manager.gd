@@ -25,8 +25,10 @@ signal grid_cleared
 		queue_redraw()
 
 @export var draw_grid: bool = true
-@export var grid_line_color: Color = Color(0.28, 0.31, 0.34, 0.45)
-@export var occupied_cell_color: Color = Color(0.96, 0.72, 0.22, 0.18)
+@export var board_background_color: Color = Color(0.035, 0.045, 0.055, 0.92)
+@export var grid_line_color: Color = Color(0.12, 0.16, 0.19, 0.88)
+@export var grid_border_color: Color = Color(0.24, 0.31, 0.36, 0.95)
+@export var occupied_cell_color: Color = Color(0.9, 0.68, 0.22, 0.12)
 
 var _cells: Dictionary = {}
 
@@ -214,14 +216,18 @@ func _draw() -> void:
 		return
 
 	var grid_pixel_size := Vector2(grid_size) * cell_size
+	var board_rect := Rect2(origin, grid_pixel_size)
+	draw_rect(board_rect, board_background_color, true)
 
 	for x in range(grid_size.x + 1):
 		var line_x := origin.x + float(x) * cell_size.x
-		draw_line(Vector2(line_x, origin.y), Vector2(line_x, origin.y + grid_pixel_size.y), grid_line_color)
+		draw_line(Vector2(line_x, origin.y), Vector2(line_x, origin.y + grid_pixel_size.y), grid_line_color, 1.2)
 
 	for y in range(grid_size.y + 1):
 		var line_y := origin.y + float(y) * cell_size.y
-		draw_line(Vector2(origin.x, line_y), Vector2(origin.x + grid_pixel_size.x, line_y), grid_line_color)
+		draw_line(Vector2(origin.x, line_y), Vector2(origin.x + grid_pixel_size.x, line_y), grid_line_color, 1.2)
+
+	draw_rect(board_rect, grid_border_color, false, 2.0)
 
 	for cell in _cells:
 		if is_cell_occupied(cell):

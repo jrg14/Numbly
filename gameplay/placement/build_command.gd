@@ -5,6 +5,7 @@ enum CommandType {
 	PLACE,
 	REMOVE,
 	ROTATE,
+	MOVE,
 }
 
 var command_type: CommandType = CommandType.PLACE
@@ -13,6 +14,7 @@ var build_parent: Node
 var building_data: BuildingData
 var scene: PackedScene
 var cell: Vector2i = Vector2i.ZERO
+var previous_cell: Vector2i = Vector2i.ZERO
 var rotation_steps: int = 0
 var previous_rotation_steps: int = 0
 var piece: Node2D
@@ -26,6 +28,8 @@ func execute() -> bool:
 			return _execute_remove()
 		CommandType.ROTATE:
 			return _execute_rotate()
+		CommandType.MOVE:
+			return _execute_move()
 
 	return false
 
@@ -38,6 +42,8 @@ func undo() -> bool:
 			return _undo_remove()
 		CommandType.ROTATE:
 			return _undo_rotate()
+		CommandType.MOVE:
+			return _undo_move()
 
 	return false
 
@@ -103,6 +109,41 @@ func _undo_rotate() -> bool:
 
 	building.set_rotation_steps(previous_rotation_steps)
 	return true
+
+
+func _execute_move() -> bool:
+	var building := piece as Building
+	if grid_manager == null or building == null or not is_instance_valid(building) or building.locked:
+		return false
+
+	var original_cell := previous_cell
+	if original_cell == cell:
+		return false
+
+	var removed_piece := grid_manager.remove_piece_at(original_cell, false)
+	if removed_piece == null:
+		return false
+
+	if grid_manager.place_piece(piece, cell, build_parent):
+		return true
+
+	grid_manager.place_piece(piece, original_cell, build_parent)
+	return false
+
+
+func _undo_move() -> bool:
+	if grid_manager == null or piece == null or not is_instance_valid(piece):
+		return false
+
+	var removed_piece := grid_manager.remove_piece_at(cell, false)
+	if removed_piece == null:
+		return false
+
+	if grid_manager.place_piece(piece, previous_cell, build_parent):
+		return true
+
+	grid_manager.place_piece(piece, cell, build_parent)
+	return false
 
 
 func _apply_piece_setup(target_piece: Node2D) -> void:

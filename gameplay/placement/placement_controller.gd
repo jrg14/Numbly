@@ -10,6 +10,7 @@ signal history_changed(can_undo: bool, can_redo: bool)
 signal layout_changed
 signal edit_actions_requested(building: Building, screen_position: Vector2)
 signal edit_actions_cancelled
+signal move_mode_changed(enabled: bool, building: Building)
 
 @export var grid_manager_path: NodePath
 @export var placement_preview_path: NodePath
@@ -35,8 +36,13 @@ var _is_drag_placing: bool = false
 var _is_drag_removing: bool = false
 var _last_drag_cell: Vector2i = Vector2i(-9999, -9999)
 var _drag_placed_cells: Dictionary = {}
+var _recently_placed_edit_suppression: Dictionary = {}
+var _touch_placement_suspended: bool = false
+var _moving_building: Building
 var _undo_stack: Array[BuildCommand] = []
 var _redo_stack: Array[BuildCommand] = []
+
+const EDIT_SUPPRESSION_AFTER_PLACE_MS := 350
 
 
 func _ready() -> void:
@@ -58,6 +64,8 @@ func _process(_delta: float) -> void:
 	if not input_enabled:
 		_stop_drag_placing()
 		_stop_drag_removing()
+		_touch_placement_suspended = false
+		cancel_move_piece()
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
 		if _route_overlay != null:
@@ -88,10 +96,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventScreenTouch:
+		if event.index > 0 or _touch_placement_suspended:
+			_stop_drag_placing()
+			_stop_drag_removing()
+			return
+
 		_handle_touch(event)
 		return
 
 	if event is InputEventScreenDrag:
+		if event.index > 0 or _touch_placement_suspended:
+			_stop_drag_placing()
+			_stop_drag_removing()
+			return
+
 		_handle_pointer_drag(event.position)
 
 
@@ -99,6 +117,7 @@ func select_building_index(index: int) -> void:
 	if index < 0 or index >= available_building_data.size():
 		return
 
+	cancel_move_piece()
 	edit_actions_cancelled.emit()
 
 	if selected_building_index != index:
@@ -137,6 +156,13 @@ func clear_selected_building() -> void:
 	if _route_overlay != null:
 		_route_overlay.hide_routes()
 	selected_building_changed.emit(-1, null)
+
+
+func set_touch_placement_suspended(enabled: bool) -> void:
+	_touch_placement_suspended = enabled
+	if _touch_placement_suspended:
+		_stop_drag_placing()
+		_stop_drag_removing()
 
 
 func select_building_scene(scene: PackedScene) -> void:
@@ -207,6 +233,7 @@ func _place_selected_at(cell: Vector2i, placement_rotation_steps: int) -> bool:
 
 	var placed := _execute_command(command)
 	if placed:
+		_suppress_edit_actions_for_piece(command.piece, cell)
 		placement_succeeded.emit(command.piece, cell)
 		if building_data.building_type != BuildingData.BuildingType.CONVEYOR:
 			clear_selected_building()
@@ -239,6 +266,72 @@ func remove_piece_at(cell: Vector2i) -> Node2D:
 		return command.piece
 
 	return null
+
+
+func start_move_piece_at(cell: Vector2i) -> bool:
+	if not input_enabled or _grid_manager == null or not _grid_manager.is_in_bounds(cell):
+		return false
+
+	var building := _grid_manager.get_occupant(cell) as Building
+	if not _is_editable_building(building):
+		placement_failed.emit(cell)
+		return false
+
+	clear_selected_building()
+	_moving_building = building
+	_stop_drag_placing()
+	_stop_drag_removing()
+	move_mode_changed.emit(true, _moving_building)
+	_update_preview(get_viewport().get_mouse_position())
+	return true
+
+
+func cancel_move_piece() -> void:
+	if _moving_building == null:
+		return
+
+	_moving_building = null
+	move_mode_changed.emit(false, null)
+	if _placement_preview != null:
+		_placement_preview.hide_preview()
+	if _route_overlay != null:
+		_route_overlay.hide_routes()
+
+
+func is_moving_piece() -> bool:
+	return _moving_building != null and is_instance_valid(_moving_building)
+
+
+func move_piece_to(cell: Vector2i) -> bool:
+	if not input_enabled or _grid_manager == null or not is_moving_piece():
+		return false
+
+	if not _grid_manager.is_in_bounds(cell):
+		placement_failed.emit(cell)
+		return false
+
+	if not _can_move_piece_to(_moving_building, cell):
+		placement_failed.emit(cell)
+		return false
+
+	var previous_cell := _moving_building.grid_position
+	if previous_cell == cell:
+		cancel_move_piece()
+		return true
+
+	var command := BuildCommand.new()
+	command.command_type = BuildCommand.CommandType.MOVE
+	command.grid_manager = _grid_manager
+	command.build_parent = _get_build_parent()
+	command.piece = _moving_building
+	command.previous_cell = previous_cell
+	command.cell = cell
+
+	var moved := _execute_command(command)
+	if moved:
+		cancel_move_piece()
+
+	return moved
 
 
 func rotate_piece_at(cell: Vector2i) -> bool:
@@ -391,6 +484,10 @@ func _handle_pointer_drag(screen_position: Vector2) -> void:
 
 
 func _begin_or_place_at_screen_position(screen_position: Vector2) -> void:
+	if is_moving_piece():
+		_try_move_at_screen_position(screen_position)
+		return
+
 	if _request_edit_actions_at_screen_position(screen_position):
 		return
 
@@ -419,6 +516,14 @@ func _try_place_at_screen_position(screen_position: Vector2) -> void:
 	place_selected_at(_grid_manager.world_to_grid(_screen_to_world(screen_position)))
 
 
+func _try_move_at_screen_position(screen_position: Vector2) -> void:
+	if _grid_manager == null:
+		return
+
+	edit_actions_cancelled.emit()
+	move_piece_to(_grid_manager.world_to_grid(_screen_to_world(screen_position)))
+
+
 func _drag_place_at_screen_position(screen_position: Vector2) -> void:
 	if _grid_manager == null:
 		return
@@ -444,6 +549,10 @@ func _try_remove_at_screen_position(screen_position: Vector2) -> void:
 
 
 func _update_preview(screen_position: Vector2) -> void:
+	if is_moving_piece():
+		_update_move_preview(screen_position)
+		return
+
 	if erase_mode or _grid_manager == null or _placement_preview == null or selected_building_index == -1:
 		if _placement_preview != null:
 			_placement_preview.hide_preview()
@@ -656,6 +765,8 @@ func _execute_command(command: BuildCommand) -> bool:
 	if building != null:
 		footprint_size = building.footprint_size
 
+	if command.command_type == BuildCommand.CommandType.MOVE:
+		_update_conveyor_routes_around(command.previous_cell, footprint_size)
 	_update_conveyor_routes_around(command.cell, footprint_size)
 	history_changed.emit(can_undo(), can_redo())
 	layout_changed.emit()
@@ -855,6 +966,9 @@ func _request_edit_actions_at_screen_position(screen_position: Vector2) -> bool:
 		edit_actions_cancelled.emit()
 		return false
 
+	if _is_edit_action_suppressed(cell):
+		return false
+
 	var building := _grid_manager.get_occupant(cell) as Building
 	if not _is_editable_building(building):
 		return false
@@ -871,6 +985,71 @@ func _request_edit_actions_at_screen_position(screen_position: Vector2) -> bool:
 		)
 
 	edit_actions_requested.emit(building, screen_position)
+	return true
+
+
+func _suppress_edit_actions_for_piece(piece: Node2D, fallback_cell: Vector2i) -> void:
+	var expires_at := Time.get_ticks_msec() + EDIT_SUPPRESSION_AFTER_PLACE_MS
+	var building := piece as Building
+	if building == null:
+		_recently_placed_edit_suppression[fallback_cell] = expires_at
+		return
+
+	for occupied_cell in building.get_occupied_cells():
+		_recently_placed_edit_suppression[occupied_cell] = expires_at
+
+
+func _is_edit_action_suppressed(cell: Vector2i) -> bool:
+	if not _recently_placed_edit_suppression.has(cell):
+		return false
+
+	var expires_at: int = _recently_placed_edit_suppression[cell]
+	if Time.get_ticks_msec() <= expires_at:
+		return true
+
+	_recently_placed_edit_suppression.erase(cell)
+	return false
+
+
+func _update_move_preview(screen_position: Vector2) -> void:
+	if _grid_manager == null or _placement_preview == null or not is_moving_piece():
+		return
+
+	var cell := _grid_manager.world_to_grid(_screen_to_world(screen_position))
+	_last_hovered_cell = cell
+
+	if not _grid_manager.is_in_bounds(cell):
+		_placement_preview.hide_preview()
+		if _route_overlay != null:
+			_route_overlay.hide_routes()
+		return
+
+	var can_move := _can_move_piece_to(_moving_building, cell)
+	var building_data := _moving_building.building_data
+	var footprint_size := _moving_building.footprint_size
+	_placement_preview.show_at(
+		_grid_manager.grid_to_world_for_footprint(cell, footprint_size),
+		can_move,
+		_get_building_rotation_steps(_moving_building),
+		building_data
+	)
+
+	if _route_overlay != null:
+		_route_overlay.show_focus(cell, null, building_data, _get_building_rotation_steps(_moving_building), true, can_move)
+
+
+func _can_move_piece_to(building: Building, cell: Vector2i) -> bool:
+	if building == null or not is_instance_valid(building):
+		return false
+
+	for footprint_cell in _grid_manager.get_footprint_cells(cell, building.footprint_size):
+		if not _grid_manager.is_in_bounds(footprint_cell):
+			return false
+
+		var occupant := _grid_manager.get_occupant(footprint_cell)
+		if occupant != null and occupant != building:
+			return false
+
 	return true
 
 

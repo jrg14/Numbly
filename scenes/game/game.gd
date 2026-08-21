@@ -3,6 +3,7 @@ extends Node2D
 @export var current_level: LevelData
 
 @onready var grid_manager: GridManager = $GridManager
+@onready var world_camera: Camera2D = $WorldCamera
 @onready var buildings_root: Node2D = $Buildings
 @onready var packet_visualizer: PacketVisualizer = $PacketVisuals
 @onready var level_controller: LevelController = $LevelController
@@ -30,8 +31,15 @@ var _build_palette_panel: PanelContainer
 var _build_palette: HBoxContainer
 var _edit_actions_panel: PanelContainer
 var _edit_actions_building: Building
+var _edit_move_button: Button
 var _edit_rotate_button: Button
 var _edit_delete_button: Button
+var _active_touches: Dictionary = {}
+var _last_pinch_distance: float = 0.0
+
+const MIN_CAMERA_ZOOM := 0.75
+const MAX_CAMERA_ZOOM := 2.4
+const CAMERA_EDGE_MARGIN := 96.0
 
 
 func _ready() -> void:
@@ -47,6 +55,7 @@ func _ready() -> void:
 	_create_build_palette()
 	_create_edit_actions_panel()
 	$UI.move_child(completion_overlay, $UI.get_child_count() - 1)
+	world_camera.make_current()
 	_configure_mobile_hud()
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 
@@ -70,6 +79,7 @@ func _ready() -> void:
 	placement_controller.selected_building_changed.connect(_on_selected_building_changed)
 	placement_controller.edit_actions_requested.connect(_on_edit_actions_requested)
 	placement_controller.edit_actions_cancelled.connect(_hide_edit_actions)
+	placement_controller.move_mode_changed.connect(_on_move_mode_changed)
 	placement_controller.history_changed.connect(_on_history_changed)
 	placement_controller.layout_changed.connect(_on_layout_changed)
 	simulation_manager.simulation_started.connect(_refresh_play_pause_label)
@@ -85,6 +95,15 @@ func _ready() -> void:
 	reset_level()
 	_refresh_play_pause_label()
 	_on_history_changed(false, false)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		_handle_camera_touch(event)
+		return
+
+	if event is InputEventScreenDrag:
+		_handle_camera_drag(event)
 
 
 func _on_play_pause_pressed() -> void:
@@ -312,6 +331,13 @@ func _create_edit_actions_panel() -> void:
 	actions.add_theme_constant_override("separation", 8)
 	margin.add_child(actions)
 
+	_edit_move_button = Button.new()
+	_edit_move_button.name = "MoveButton"
+	_edit_move_button.text = "Mover"
+	_apply_mobile_button_style(_edit_move_button, Vector2(104, 52), 18)
+	_edit_move_button.pressed.connect(_on_edit_move_pressed)
+	actions.add_child(_edit_move_button)
+
 	_edit_rotate_button = Button.new()
 	_edit_rotate_button.name = "RotateButton"
 	_edit_rotate_button.text = "Rotar"
@@ -402,6 +428,133 @@ func _fit_board_to_viewport(level_grid_size: Vector2i) -> void:
 		if preview != null:
 			preview.cell_size = grid_manager.cell_size
 
+	_reset_camera_view()
+
+
+func _handle_camera_touch(event: InputEventScreenTouch) -> void:
+	if event.pressed:
+		_active_touches[event.index] = event.position
+	else:
+		_active_touches.erase(event.index)
+
+	_last_pinch_distance = _get_touch_distance()
+	placement_controller.set_touch_placement_suspended(_active_touches.size() >= 2)
+
+
+func _handle_camera_drag(event: InputEventScreenDrag) -> void:
+	if not _active_touches.has(event.index):
+		return
+
+	_active_touches[event.index] = event.position
+
+	if _active_touches.size() >= 2:
+		placement_controller.set_touch_placement_suspended(true)
+		_apply_pinch_zoom()
+		get_viewport().set_input_as_handled()
+		return
+
+	if _can_pan_with_single_touch():
+		_pan_camera(event.relative)
+		get_viewport().set_input_as_handled()
+
+
+func _can_pan_with_single_touch() -> bool:
+	return placement_controller != null \
+		and placement_controller.selected_building_index == -1 \
+		and not placement_controller.is_moving_piece()
+
+
+func _pan_camera(screen_delta: Vector2) -> void:
+	world_camera.position -= screen_delta / world_camera.zoom.x
+	_clamp_camera_to_board()
+	_hide_edit_actions()
+
+
+func _apply_pinch_zoom() -> void:
+	var pinch_distance := _get_touch_distance()
+	var pinch_center := _get_touch_center()
+	if pinch_distance <= 1.0 or _last_pinch_distance <= 1.0:
+		_last_pinch_distance = pinch_distance
+		return
+
+	var previous_focus := _screen_to_world(pinch_center)
+	var zoom_factor := pinch_distance / _last_pinch_distance
+	var next_zoom := clampf(world_camera.zoom.x * zoom_factor, MIN_CAMERA_ZOOM, MAX_CAMERA_ZOOM)
+	world_camera.zoom = Vector2(next_zoom, next_zoom)
+	var current_focus := _screen_to_world(pinch_center)
+	world_camera.position += previous_focus - current_focus
+	_clamp_camera_to_board()
+	_hide_edit_actions()
+
+	_last_pinch_distance = pinch_distance
+
+
+func _get_touch_distance() -> float:
+	if _active_touches.size() < 2:
+		return 0.0
+
+	var points := _get_touch_points()
+	return points[0].distance_to(points[1])
+
+
+func _get_touch_center() -> Vector2:
+	if _active_touches.is_empty():
+		return Vector2.ZERO
+
+	var center := Vector2.ZERO
+	for point in _get_touch_points():
+		center += point
+
+	return center / float(_active_touches.size())
+
+
+func _get_touch_points() -> Array[Vector2]:
+	var points: Array[Vector2] = []
+	for index in _active_touches.keys():
+		var point: Vector2 = _active_touches[index]
+		points.append(point)
+
+	return points
+
+
+func _reset_camera_view() -> void:
+	_active_touches.clear()
+	_last_pinch_distance = 0.0
+	placement_controller.set_touch_placement_suspended(false)
+	world_camera.zoom = Vector2.ONE
+	world_camera.position = get_viewport_rect().size * 0.5
+	_clamp_camera_to_board()
+
+
+func _clamp_camera_to_board() -> void:
+	var board_rect := _get_board_world_rect()
+	if board_rect.size.x <= 0.0 or board_rect.size.y <= 0.0:
+		return
+
+	var viewport_size := get_viewport_rect().size
+	var half_view := viewport_size / (2.0 * world_camera.zoom.x)
+	var min_position := board_rect.position - Vector2(CAMERA_EDGE_MARGIN, CAMERA_EDGE_MARGIN) + half_view
+	var max_position := board_rect.position + board_rect.size + Vector2(CAMERA_EDGE_MARGIN, CAMERA_EDGE_MARGIN) - half_view
+
+	if min_position.x > max_position.x:
+		world_camera.position.x = board_rect.get_center().x
+	else:
+		world_camera.position.x = clampf(world_camera.position.x, min_position.x, max_position.x)
+
+	if min_position.y > max_position.y:
+		world_camera.position.y = board_rect.get_center().y
+	else:
+		world_camera.position.y = clampf(world_camera.position.y, min_position.y, max_position.y)
+
+
+func _get_board_world_rect() -> Rect2:
+	var board_size := Vector2(grid_manager.grid_size) * grid_manager.cell_size
+	return Rect2(grid_manager.to_global(grid_manager.origin), board_size)
+
+
+func _screen_to_world(screen_position: Vector2) -> Vector2:
+	return world_camera.position + (screen_position - get_viewport_rect().size * 0.5) / world_camera.zoom.x
+
 
 func _apply_mobile_button_style(button: Button, minimum_size: Vector2, font_size: int) -> void:
 	button.custom_minimum_size = minimum_size
@@ -482,6 +635,16 @@ func _on_edit_rotate_pressed() -> void:
 	placement_controller.rotate_piece_at(cell)
 
 
+func _on_edit_move_pressed() -> void:
+	if _edit_actions_building == null or not is_instance_valid(_edit_actions_building):
+		_hide_edit_actions()
+		return
+
+	var cell := _edit_actions_building.grid_position
+	_hide_edit_actions()
+	placement_controller.start_move_piece_at(cell)
+
+
 func _on_edit_delete_pressed() -> void:
 	if _edit_actions_building == null or not is_instance_valid(_edit_actions_building):
 		_hide_edit_actions()
@@ -510,6 +673,13 @@ func _clamp_edit_actions_panel() -> void:
 func _on_selected_building_changed(index: int, _scene: PackedScene) -> void:
 	for i in range(build_buttons.size()):
 		build_buttons[i].set_pressed_no_signal(i == index)
+
+
+func _on_move_mode_changed(enabled: bool, _building: Building) -> void:
+	if enabled:
+		status_label.text = "Toca una celda libre para mover el edificio."
+	else:
+		status_label.text = "Coloca edificios y pulsa Play."
 
 
 func _on_viewport_size_changed() -> void:
