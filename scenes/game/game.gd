@@ -143,7 +143,8 @@ func retry_level_attempt() -> void:
 
 
 func _on_packet_transferred(packet: NumberPacket, from_building: Building, to_building: Building) -> void:
-	packet_visualizer.show_transfer(packet, from_building, to_building)
+	if not (to_building is ConveyorBuilding):
+		packet_visualizer.show_transfer(packet, from_building, to_building)
 	status_label.text = "Packet %d: %s -> %s" % [packet.value, from_building.name, to_building.name]
 
 

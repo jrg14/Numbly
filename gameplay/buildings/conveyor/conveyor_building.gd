@@ -193,18 +193,23 @@ func _draw_queued_packets(path_points: Array[Vector2]) -> void:
 
 
 func _draw_packet_badge(position: Vector2, text: String) -> void:
-	draw_circle(position + Vector2(1.5, 2.0), 12.0, Color(0.02, 0.025, 0.03, 0.72))
-	draw_circle(position, 12.0, packet_color)
-	draw_arc(position, 12.0, 0.0, TAU, 18, Color(0.05, 0.06, 0.06, 0.9), 2.0)
+	var snapped_position := position.round()
+	var radius := 14.0
+	draw_circle(snapped_position + Vector2(1.0, 2.0), radius, Color(0.02, 0.025, 0.03, 0.72))
+	draw_circle(snapped_position, radius, packet_color)
+	draw_arc(snapped_position, radius, 0.0, TAU, 24, Color(0.05, 0.06, 0.06, 0.95), 2.0)
 
 	var font := ThemeDB.fallback_font
 	if font == null:
 		return
 
-	var font_size := 13
+	var font_size := 16
 	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var baseline := position + Vector2(-text_width * 0.5, 4.5)
-	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.06, 0.07, 0.08, 1.0))
+	var baseline := (snapped_position + Vector2(-text_width * 0.5, 5.5)).round()
+	var text_shadow_color := Color(1.0, 1.0, 0.92, 0.55)
+	var text_color := Color(0.025, 0.03, 0.035, 1.0)
+	draw_string(font, baseline + Vector2(0.0, 1.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, text_shadow_color)
+	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, text_color)
 
 
 func _draw_port_markers(path_points: Array[Vector2]) -> void:
