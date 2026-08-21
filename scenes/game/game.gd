@@ -67,6 +67,7 @@ func _ready() -> void:
 	level_controller.level_completed.connect(_on_level_completed)
 	level_controller.level_failed.connect(_on_level_failed)
 	placement_controller.placement_failed.connect(_on_placement_failed)
+	placement_controller.selected_building_changed.connect(_on_selected_building_changed)
 	placement_controller.erase_mode_changed.connect(_on_erase_mode_changed)
 	placement_controller.history_changed.connect(_on_history_changed)
 	placement_controller.layout_changed.connect(_on_layout_changed)
@@ -90,7 +91,7 @@ func _on_play_pause_pressed() -> void:
 
 
 func _on_build_button_pressed(index: int) -> void:
-	placement_controller.select_building_index(index)
+	placement_controller.toggle_building_index(index)
 
 
 func _refresh_play_pause_label() -> void:
@@ -233,6 +234,8 @@ func _refresh_build_buttons(available_buildings: Array[BuildingData]) -> void:
 		var has_building := i < available_buildings.size() and available_buildings[i] != null
 		button.visible = has_building
 		button.disabled = not has_building
+		button.toggle_mode = true
+		button.set_pressed_no_signal(has_building and placement_controller.selected_building_index == i)
 
 		if has_building:
 			button.text = "%d %s" % [i + 1, available_buildings[i].display_name]
@@ -244,6 +247,7 @@ func _ensure_build_button_count(count: int) -> void:
 		var button := Button.new()
 		button.name = "BuildButton%d" % (build_buttons.size() + 1)
 		_apply_mobile_button_style(button, Vector2(168, 60), 19)
+		button.toggle_mode = true
 		button.layout_mode = 2
 		_build_palette.add_child(button)
 		button.pressed.connect(_on_build_button_pressed.bind(build_buttons.size()))
@@ -424,6 +428,13 @@ func _hide_completion_overlay() -> void:
 
 func _on_erase_button_toggled(enabled: bool) -> void:
 	placement_controller.set_erase_mode(enabled)
+
+
+func _on_selected_building_changed(index: int, _scene: PackedScene) -> void:
+	for i in range(build_buttons.size()):
+		build_buttons[i].set_pressed_no_signal(i == index)
+
+	rotate_button.disabled = index == -1
 
 
 func _on_erase_mode_changed(enabled: bool) -> void:

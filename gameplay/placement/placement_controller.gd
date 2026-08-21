@@ -49,8 +49,7 @@ func _ready() -> void:
 	if available_building_data.is_empty():
 		_migrate_scene_exports_to_building_data()
 
-	if not available_building_data.is_empty():
-		select_building_index(0)
+	clear_selected_building()
 
 
 func _process(_delta: float) -> void:
@@ -109,6 +108,31 @@ func select_building_index(index: int) -> void:
 	_update_preview(get_viewport().get_mouse_position())
 
 
+func toggle_building_index(index: int) -> void:
+	if selected_building_index == index:
+		clear_selected_building()
+	else:
+		select_building_index(index)
+
+
+func clear_selected_building() -> void:
+	if selected_building_index == -1:
+		if _placement_preview != null:
+			_placement_preview.hide_preview()
+		if _route_overlay != null:
+			_route_overlay.hide_routes()
+		selected_building_changed.emit(-1, null)
+		return
+
+	selected_building_index = -1
+	_stop_drag_placing()
+	if _placement_preview != null:
+		_placement_preview.hide_preview()
+	if _route_overlay != null:
+		_route_overlay.hide_routes()
+	selected_building_changed.emit(-1, null)
+
+
 func select_building_scene(scene: PackedScene) -> void:
 	var scene_index := -1
 	for i in range(available_building_data.size()):
@@ -130,11 +154,8 @@ func set_available_buildings(building_data_list: Array[BuildingData]) -> void:
 		if building_data != null:
 			available_building_scenes.append(building_data.scene)
 
-	selected_building_index = -1
 	clear_history()
-
-	if not available_building_data.is_empty():
-		select_building_index(0)
+	clear_selected_building()
 
 
 func rotate_clockwise() -> void:
@@ -178,6 +199,8 @@ func _place_selected_at(cell: Vector2i, placement_rotation_steps: int) -> bool:
 	var placed := _execute_command(command)
 	if placed:
 		placement_succeeded.emit(command.piece, cell)
+		if building_data.building_type != BuildingData.BuildingType.CONVEYOR:
+			clear_selected_building()
 		return true
 
 	placement_failed.emit(cell)
@@ -216,6 +239,8 @@ func set_erase_mode(enabled: bool) -> void:
 	erase_mode = enabled
 	_stop_drag_placing()
 	_stop_drag_removing()
+	if erase_mode:
+		clear_selected_building()
 	erase_mode_changed.emit(erase_mode)
 
 	if _placement_preview != null:
@@ -283,11 +308,11 @@ func can_redo() -> bool:
 
 func _handle_key_input(event: InputEventKey) -> void:
 	if event.keycode >= KEY_1 and event.keycode <= KEY_9:
-		select_building_index(event.keycode - KEY_1)
+		toggle_building_index(event.keycode - KEY_1)
 		return
 
 	if event.keycode == KEY_0:
-		select_building_index(9)
+		toggle_building_index(9)
 		return
 
 	match event.keycode:
@@ -345,6 +370,9 @@ func _begin_or_place_at_screen_position(screen_position: Vector2) -> void:
 	if _can_drag_place_selected_building():
 		_start_drag_placing()
 		_drag_place_at_screen_position(screen_position)
+		return
+
+	if selected_building_index == -1:
 		return
 
 	_try_place_at_screen_position(screen_position)
